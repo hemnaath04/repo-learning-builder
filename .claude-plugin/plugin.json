@@ -1,0 +1,20 @@
+{
+  "name": "repo-learning-builder",
+  "description": "Turn any repo, GitHub URL, topic, or documents into a polished interactive learning web app.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Hemnaath Balasubramani"
+  },
+  "homepage": "https://github.com/hemnaath04/repo-learning-builder",
+  "repository": "https://github.com/hemnaath04/repo-learning-builder",
+  "license": "MIT",
+  "keywords": [
+    "learning",
+    "education",
+    "interactive-course",
+    "react",
+    "typescript",
+    "skill",
+    "claude-code"
+  ]
+}

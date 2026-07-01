@@ -38,22 +38,38 @@ consistent to produce.
 
 ## Install
 
-This repository **is** the skill. Clone it into your Claude Code skills folder:
+### Option A — marketplace (recommended)
+
+This repo is a Claude Code plugin marketplace. Add it once, then install the
+plugin. In Claude Code:
+
+```
+/plugin marketplace add hemnaath04/repo-learning-builder
+/plugin install repo-learning-builder@hemnaath-skills
+```
+
+Updates later:
+
+```
+/plugin marketplace update hemnaath-skills
+/plugin update repo-learning-builder
+```
+
+Installed as a plugin, the skill is invoked as `/repo-learning-builder:repo-learning-builder`.
+
+### Option B — clone into your skills folder
+
+The repo is also a standalone skill (`SKILL.md` at the root), so you can clone
+it directly:
 
 ```bash
 git clone https://github.com/hemnaath04/repo-learning-builder \
   ~/.claude/skills/repo-learning-builder
 ```
 
-Or add it to a single project instead of globally:
-
-```bash
-git clone https://github.com/hemnaath04/repo-learning-builder \
-  .claude/skills/repo-learning-builder
-```
-
-Restart Claude Code (or start a new session) and the `repo-learning-builder`
-skill will be available.
+Or scope it to a single project with `.claude/skills/repo-learning-builder`.
+Restart Claude Code (or start a new session) and invoke it as
+`/repo-learning-builder`.
 
 ## Use
 

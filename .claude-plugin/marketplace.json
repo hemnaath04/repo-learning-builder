@@ -1,0 +1,14 @@
+{
+  "name": "hemnaath-skills",
+  "owner": { "name": "Hemnaath Balasubramani" },
+  "description": "Skills by Hemnaath Balasubramani for Claude Code.",
+  "plugins": [
+    {
+      "name": "repo-learning-builder",
+      "source": "./",
+      "description": "Turn any repo, GitHub URL, topic, or documents into a polished interactive learning web app.",
+      "category": "learning",
+      "tags": ["learning", "education", "interactive-course", "onboarding"]
+    }
+  ]
+}
