@@ -34,7 +34,7 @@ describe('progress persistence (stable ids)', () => {
   it('migrates progress on fingerprint change, keeping stable ids', () => {
     const s = new ProgressStore(course, backend);
     s.recordQuiz('chk-story', 1, true);
-    s.toggleBookmark('l-arch');
+    s.toggleBookmark('l-channels');
     const stale = s.getState();
     stale.bookmarks.push('l-ghost');
     stale.quizAttempts['chk-ghost'] = [{ selected: 0, correct: false, at: 'now' }];
@@ -43,7 +43,7 @@ describe('progress persistence (stable ids)', () => {
     const migrated = new ProgressStore(regen, backend).getState();
     expect(migrated.quizAttempts['chk-story']).toHaveLength(1); // kept
     expect(migrated.quizAttempts['chk-ghost']).toBeUndefined();  // dropped
-    expect(migrated.bookmarks).toContain('l-arch');
+    expect(migrated.bookmarks).toContain('l-channels');
     expect(migrated.sourceFingerprint).toBe('new');
   });
 

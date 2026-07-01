@@ -3,278 +3,444 @@
   "meta": {
     "id": "claimfarm",
     "title": "Understanding ClaimFarm",
-    "subtitle": "From a farmer's photo to a filed crop-insurance claim",
-    "promise": "Learn how one photo becomes a filed insurance claim, and explain every step with confidence.",
+    "subtitle": "A deep, code-grounded tour of the whole codebase",
+    "promise": "Learn the real ClaimFarm codebase subsystem by subsystem: channels, agents, AI, RAG, the console, auth, data, and how to run and extend it.",
     "sourceType": "github-url",
     "sourceRef": "github.com/hemnaath04/claimfarm",
     "sourceFingerprint": "40deb355972b6a6198f8934327f69058a9586c11",
     "generatedAt": "2026-07-01T00:00:00.000Z",
     "category": "ai-ml",
-    "audience": "Intermediate",
-    "goal": "Present or interview",
-    "depth": "standard",
-    "style": "balanced",
-    "estimatedMinutes": 70,
+    "audience": "Intermediate, Python",
+    "goal": "Contribute",
+    "depth": "deep",
+    "style": "code-first",
+    "estimatedMinutes": 165,
     "outcomes": [
-      "Explain what ClaimFarm does and the problem it solves",
-      "Trace one photo end to end, webhook to filed claim",
-      "Name each agent and the service it uses, and why",
-      "Answer a judge's questions about limits and fraud"
+      "Trace one photo from a verified webhook to a filed claim, through the real functions",
+      "Explain each of the nine agents and the client it calls, with file citations",
+      "Describe the security posture: signature checks, rate limiting, headers, Argon2id, RBAC",
+      "Name where every kind of data lives and how it is retrieved",
+      "Swap a provider (vector store, payments, identity) or run and deploy the app"
     ],
     "levels": ["eli10", "beginner", "intermediate", "advanced"],
-    "defaultLevel": "beginner"
+    "defaultLevel": "intermediate"
   },
   "registries": {
     "concepts": {
-      "c-story": { "name": "What ClaimFarm is", "summary": "A chat-to-claim autopilot for smallholder crop insurance." },
-      "c-problem": { "name": "The problem", "summary": "Fewer than 20% of eligible farmers file; language, evidence, and literacy block them." },
-      "c-arch": { "name": "Architecture", "summary": "Signature-verified webhooks funnel every channel into one shared pipeline." },
-      "c-journey": { "name": "The request journey", "summary": "process_inbound assesses, corroborates, drafts, saves, and replies; a human then approves." },
-      "c-agents": { "name": "The agent pipeline", "summary": "One focused agent per step, each returning structured, checkable output." },
-      "c-data": { "name": "Data and state", "summary": "Three stores by shape: SQL records, OSS files, DashVector embeddings." },
-      "c-tradeoffs": { "name": "Tradeoffs", "summary": "Honest, scoped limits, each with a named production fix." }
+      "c-story": { "name": "What ClaimFarm is", "summary": "A chat-to-claim autopilot with a human checkpoint for smallholder crop insurance." },
+      "c-problem": { "name": "The problem and product", "summary": "A two-sided SaaS: farmers on chat, adjusters on a console; the win is filing conversion." },
+      "c-channels": { "name": "Channels and webhook trust", "summary": "Three providers, three signature schemes, one shared pipeline, fail-closed." },
+      "c-hardening": { "name": "Rate limiting and headers", "summary": "Per-IP limiter on /api and /auth plus OWASP security headers on every response." },
+      "c-intake": { "name": "The intake orchestrator", "summary": "process_inbound runs the synchronous pipeline and always replies to the farmer." },
+      "c-vision": { "name": "Multimodal vision", "summary": "Qwen-VL returns a strict-JSON DamageAssessment, a typed function from an LLM." },
+      "c-forensics": { "name": "Photo forensics", "summary": "EXIF, perceptual hashing, and a VL authenticity check, defense in depth." },
+      "c-weather": { "name": "Weather corroboration", "summary": "Open-Meteo history aggregated into drought/flood signals that test the damage claim." },
+      "c-rag": { "name": "Vector store and RAG", "summary": "One embedding, two jobs: retrieve precedents and detect near-duplicate fraud." },
+      "c-output": { "name": "Drafting and localization", "summary": "Qwen-Max drafts, WeasyPrint renders a PDF, replies are translated templates." },
+      "c-review": { "name": "The adjuster console", "summary": "get_claim assembles evidence; post_decision files to the insurer and notifies." },
+      "c-authz": { "name": "Auth and RBAC", "summary": "Argon2id passwords, opaque server-side sessions, role hierarchy, audit log." },
+      "c-data": { "name": "Data and storage", "summary": "SQLModel records, OSS blobs, DashVector embeddings, each store by shape." },
+      "c-extend": { "name": "Provider abstractions", "summary": "Vector store, payments, and identity are swappable behind interfaces via config." },
+      "c-deploy": { "name": "Running and deploying", "summary": "uv, Docker, Function Compute, Vercel, CI dual-push, with real startup quirks." },
+      "c-tradeoffs": { "name": "Tradeoffs", "summary": "Honest demo shortcuts, each with a named production fix." }
     },
     "technologies": {
-      "t-qwenvl": { "name": "Qwen-VL-Max", "purpose": "Reads the crop photo, returns a structured damage report.", "location": "app/agents/damage_assessor.py", "alternatives": "GPT-4o, Gemini vision", "tradeoffs": "Required by the hackathon; strong multimodal quality." },
-      "t-qwenmax": { "name": "Qwen-Max", "purpose": "Drafts the claim and translates replies.", "location": "app/agents/claim_drafter.py", "alternatives": "Any strong text LLM", "tradeoffs": "Cheaper than vision rates for text tasks." },
-      "t-embed": { "name": "text-embedding-v3", "purpose": "Vectors for similar-claim search and fraud.", "location": "app/clients/embeddings.py", "alternatives": "OpenAI embeddings", "tradeoffs": "One representation serves RAG and fraud." },
-      "t-fastapi": { "name": "FastAPI", "purpose": "Receives webhooks, exposes the console API.", "location": "app/main.py", "alternatives": "Flask, Django", "tradeoffs": "Async, typed, fast to build." },
-      "t-dashvector": { "name": "Alibaba DashVector", "purpose": "Vector search for similar claims.", "location": "app/clients/vector_store.py", "alternatives": "Chroma, Pinecone", "tradeoffs": "Managed; Chroma fallback for dev." },
-      "t-fc": { "name": "Function Compute", "purpose": "Runs the backend container, scale-to-zero.", "location": "Dockerfile", "alternatives": "ECS, Kubernetes", "tradeoffs": "Cheap for bursty demos; ephemeral /tmp." }
+      "t-qwenvl": { "name": "Qwen-VL-Max", "purpose": "Reads the crop photo into a structured DamageAssessment.", "location": "app/agents/damage_assessor.py", "alternatives": "GPT-4o, Gemini vision", "tradeoffs": "Hackathon requirement; strong multimodal quality." },
+      "t-qwenmax": { "name": "Qwen-Max", "purpose": "Drafts claim text and translates farmer replies.", "location": "app/agents/claim_drafter.py, multilingual.py", "alternatives": "Any strong text LLM", "tradeoffs": "Cheaper than vision rates for text-only work." },
+      "t-embed": { "name": "text-embedding-v3", "purpose": "Embeds claims for similarity search and fraud.", "location": "app/clients/embeddings.py", "alternatives": "OpenAI embeddings", "tradeoffs": "1024-dim; one representation serves RAG and fraud." },
+      "t-fastapi": { "name": "FastAPI + Starlette", "purpose": "Webhooks, the console API, middleware, and BackgroundTasks.", "location": "app/main.py, app/middlewares.py", "alternatives": "Flask, Django", "tradeoffs": "Async, typed, fast to build." },
+      "t-argon2": { "name": "argon2-cffi", "purpose": "Argon2id password hashing (m=64MiB, t=3, p=4).", "location": "app/auth/passwords.py", "alternatives": "bcrypt, scrypt", "tradeoffs": "OWASP 2023 default; legacy PBKDF2 still verified and rehashed." },
+      "t-vector": { "name": "DashVector / Chroma", "purpose": "Vector search behind one VectorStore interface.", "location": "app/clients/vector_store.py", "alternatives": "Pinecone, pgvector", "tradeoffs": "DashVector in prod, Chroma for local dev via get_store()." },
+      "t-openmeteo": { "name": "Open-Meteo", "purpose": "Keyless historical daily weather.", "location": "app/clients/weather.py", "alternatives": "NOAA, paid APIs", "tradeoffs": "Free and keyless, removing a credential." },
+      "t-weasyprint": { "name": "WeasyPrint + Jinja2", "purpose": "Renders the claim PDF from an HTML template.", "location": "app/agents/claim_drafter.py", "alternatives": "ReportLab", "tradeoffs": "HTML/CSS templates, easy to restyle." },
+      "t-oss": { "name": "Alibaba OSS", "purpose": "Stores photos and PDFs with signed URLs.", "location": "app/clients/alibaba_oss.py", "alternatives": "S3", "tradeoffs": "Keeps bytes out of the app process." },
+      "t-fc": { "name": "Function Compute 3.0", "purpose": "Runs the backend container, scale-to-zero.", "location": "Dockerfile", "alternatives": "ECS, Kubernetes", "tradeoffs": "Cheap for bursty demos; SQLite in /tmp is ephemeral." }
     },
     "sources": {
-      "s-readme": { "path": "README.md", "lines": "1-46", "note": "pitch and product surface" },
-      "s-intake": { "path": "app/agents/whatsapp_intake.py", "lines": "62-140", "note": "process_inbound: the pipeline" },
-      "s-gps": { "path": "app/agents/whatsapp_intake.py", "lines": "29-34", "note": "default GPS demo constants" },
-      "s-damage": { "path": "app/agents/damage_assessor.py", "lines": "1-60", "note": "strict JSON prompts" },
-      "s-forensics": { "path": "app/agents/photo_forensics.py", "note": "EXIF + VL + perceptual hash" },
-      "s-weather": { "path": "app/agents/weather_corroborator.py", "note": "Open-Meteo corroboration" },
-      "s-rag": { "path": "app/agents/past_claim_rag.py", "note": "find_similar and index_claim" },
-      "s-drafter": { "path": "app/agents/claim_drafter.py", "note": "build_claim and render_claim_pdf" },
-      "s-qwen": { "path": "app/clients/qwen.py", "lines": "1-55", "note": "Qwen via OpenAI-compatible client" },
-      "s-main": { "path": "app/main.py", "lines": "104-180", "note": "webhook signature verification" },
+      "s-readme": { "path": "README.md", "note": "product surface and stack table (orientation only)" },
+      "s-main": { "path": "app/main.py", "lines": "104-310", "note": "webhook routes + Twilio/Bird/Telegram verification" },
+      "s-main-seed": { "path": "app/main.py", "lines": "39-66", "note": "ephemeral-SQLite demo seed on cold start" },
+      "s-mid": { "path": "app/middlewares.py", "lines": "15-100", "note": "IPRateLimiter + SecurityHeaders" },
+      "s-intake": { "path": "app/agents/whatsapp_intake.py", "lines": "62-140", "note": "process_inbound synchronous pipeline" },
+      "s-intake-loc": { "path": "app/agents/whatsapp_intake.py", "lines": "1-60", "note": "default GPS + location-share flow constants" },
+      "s-damage": { "path": "app/agents/damage_assessor.py", "lines": "1-60", "note": "strict JSON prompt + assess_damage" },
+      "s-qwen": { "path": "app/clients/qwen.py", "lines": "1-55", "note": "Qwen via OpenAI-compatible client, vision_chat" },
+      "s-forensics": { "path": "app/agents/photo_forensics.py", "note": "EXIF + VL authenticity + perceptual hash" },
+      "s-phash": { "path": "app/clients/perceptual_hash.py", "note": "average_hash, hamming_distance, find_close_matches" },
+      "s-weather": { "path": "app/clients/weather.py", "lines": "35-85", "note": "summarize_window + _max_run aggregates" },
+      "s-corr": { "path": "app/agents/weather_corroborator.py", "note": "judge damage vs weather summary" },
+      "s-vector": { "path": "app/clients/vector_store.py", "lines": "34-260", "note": "VectorStore ABC, ChromaStore, DashVectorStore, get_store" },
+      "s-rag": { "path": "app/agents/past_claim_rag.py", "note": "find_similar + index_claim" },
+      "s-fraud": { "path": "app/agents/fraud_check.py", "note": "similarity-based fraud flags" },
+      "s-drafter": { "path": "app/agents/claim_drafter.py", "note": "build_claim + render_claim_pdf (WeasyPrint)" },
+      "s-multi": { "path": "app/agents/multilingual.py", "note": "detect_language, localize, status_message" },
       "s-api": { "path": "app/api_claims.py", "lines": "120-158", "note": "get_claim assembles similar + fraud" },
-      "s-config": { "path": "app/config.py", "lines": "16-34", "note": "model names and vector_store switch" }
+      "s-api-dec": { "path": "app/api_claims.py", "lines": "186-305", "note": "post_decision files + _notify_farmer" },
+      "s-passwords": { "path": "app/auth/passwords.py", "note": "Argon2id + legacy PBKDF2 + needs_rehash" },
+      "s-authroutes": { "path": "app/auth/routes.py", "note": "sign-up/in, opaque sessions, RBAC" },
+      "s-admin": { "path": "app/api_admin.py", "lines": "21-112", "note": "set_role, suspend, audit_log_tail" },
+      "s-config": { "path": "app/config.py", "lines": "13-112", "note": "Settings: models, vector_store, DATABASE_URL" },
+      "s-claimsrepo": { "path": "app/storage/claims_repo.py", "note": "save + index_claim into the vector store" },
+      "s-audit": { "path": "app/storage/audit_log.py", "note": "append-only audit trail" },
+      "s-models": { "path": "app/models/claim.py", "note": "Claim, ClaimStatus, Farmer" },
+      "s-idv": { "path": "app/clients/identity_verification.py", "lines": "30-129", "note": "IdentityProvider Protocol + Mock/Persona" },
+      "s-payments": { "path": "app/clients/payments.py", "note": "merchant-of-record: Paddle/LemonSqueezy/Razorpay" },
+      "s-gdpr": { "path": "app/api_gdpr.py", "note": "export_my_data + delete_my_account" },
+      "s-docker": { "path": "Dockerfile", "note": "CMD execs uvicorn from the venv" },
+      "s-tests": { "path": "tests/test_claims_pipeline.py", "note": "end-to-end pipeline test" }
     },
     "glossary": {
-      "g-agent": { "term": "Agent", "definition": "A small piece of code doing one job by calling an AI model plus tools, returning structured output." },
-      "g-multimodal": { "term": "Multimodal", "definition": "An AI model that understands more than text. Qwen-VL-Max can read images." },
-      "g-embedding": { "term": "Embedding", "definition": "A list of numbers capturing meaning so similar things sit close together." },
+      "g-hmac": { "term": "HMAC signature", "definition": "A keyed hash a sender attaches so the receiver can prove the request is genuine and unmodified." },
+      "g-webhook": { "term": "Webhook", "definition": "A URL a service calls when an event happens, like an inbound chat message." },
+      "g-argon2": { "term": "Argon2id", "definition": "A memory-hard password hashing algorithm; the OWASP 2023 default." },
+      "g-rbac": { "term": "RBAC", "definition": "Role-Based Access Control: what you may do depends on your role." },
       "g-rag": { "term": "RAG", "definition": "Retrieval-Augmented Generation: fetch relevant facts and feed them to the model." },
-      "g-webhook": { "term": "Webhook", "definition": "A URL a service calls when something happens, like an inbound message." },
-      "g-hitl": { "term": "Human-in-the-loop", "definition": "The system prepares the work but a person makes the final call." }
+      "g-embedding": { "term": "Embedding", "definition": "A vector capturing meaning so similar items sit close together." },
+      "g-phash": { "term": "Perceptual hash", "definition": "A fingerprint of an image's look; near-identical images get near-identical hashes." },
+      "g-mor": { "term": "Merchant of record", "definition": "A payment provider that sells on your behalf and handles tax and compliance." },
+      "g-hitl": { "term": "Human-in-the-loop", "definition": "The system prepares the work but a person makes the final call." },
+      "g-idempotent": { "term": "Idempotent", "definition": "Safe to run more than once with the same result; matters because webhooks retry." }
     }
   },
   "checks": {
-    "chk-story": { "q": "What is the one input a farmer provides to start a claim?", "options": ["A PDF form", "A photo of the damaged crop", "A bank statement", "A video call"], "answer": 1, "hint": "The whole pitch collapses to one thing.", "why": "A single photo (optionally with a few words in any language) is the entry point; everything else is generated." },
-    "chk-hitl": { "q": "Where does a human still decide?", "options": ["Nowhere, it is automatic", "An adjuster approves before filing", "The farmer approves wording", "The model decides payout"], "answer": 1, "hint": "Track 4: human checkpoint.", "why": "An adjuster reviews AI assessment, weather, and fraud flags, then approves. That checkpoint is core." },
-    "chk-metric": { "q": "What metric best captures the value?", "options": ["Benchmark accuracy", "Percent of eligible losses that become reviewed claims", "GPUs used", "PDF speed"], "answer": 1, "hint": "What failed before was filing at all.", "why": "The point is conversion: turning losses that never got filed into reviewed claims." },
-    "chk-failclosed": { "q": "If a channel's webhook secret is unset, the webhook...", "options": ["Accepts everything", "Rejects the request (fail-closed)", "Crashes", "Uses a default password"], "answer": 1, "hint": "SEC-008.", "why": "An unconfigured webhook is treated as closed, so a misconfiguration never opens the door to forged claims." },
-    "chk-defer": { "q": "Where are similar-claims and fraud computed?", "options": ["In process_inbound before replying", "In get_claim when an adjuster opens the claim", "Nightly cron", "In the frontend"], "answer": 1, "hint": "Who needs it: farmer or adjuster?", "why": "find_similar and fraud_check run in get_claim at review time, keeping the farmer reply fast." },
-    "chk-json": { "q": "How is Qwen-VL output made safe to use in code?", "options": ["Trust the prose", "Strict JSON parsed into a typed DamageAssessment", "OCR the reply", "Ask twice"], "answer": 1, "hint": "json_mode.", "why": "A strict JSON prompt yields a typed DamageAssessment, turning the model into a reliable typed function." },
-    "chk-embed": { "q": "How does one embedding serve both RAG and fraud?", "options": ["Different models", "Similar claims are helpful precedents and near-duplicate risk from the same search", "Regex only", "It does not"], "answer": 1, "hint": "Same vectors, two readings.", "why": "The same similarity surfaces useful precedents and suspicious near-duplicates." },
-    "chk-sqlite": { "q": "Why move from SQLite to Postgres in production?", "options": ["Trendier", "On Function Compute the SQLite file is ephemeral and wiped on recycle", "SQLite cannot store text", "More RAM"], "answer": 1, "hint": "Why the demo seed exists.", "why": "FC's /tmp is ephemeral, so SQLite data does not survive; Postgres via DATABASE_URL is durable." },
-    "chk-gps": { "q": "Best way to handle the default-GPS limit in a pitch?", "options": ["Hope no one asks", "Name it as a demo shortcut with the fix (opt-in location); the pipeline already takes lat/lon", "Claim it is exact", "Remove it"], "answer": 1, "hint": "Honesty plus upgrade path.", "why": "Naming the limit and its fix shows production thinking, which Track 4 rewards." }
+    "chk-story": { "q": "What makes ClaimFarm's design acceptable to insurers?", "options": ["Fully automatic payouts", "A human adjuster approves before filing", "It never uses AI", "It only reads READMEs"], "answer": 1, "hint": "Track 4 checkpoint.", "why": "A human-in-the-loop adjuster approves each claim before it is filed, which insurers require." },
+    "chk-problem": { "q": "Which metric captures the product's value?", "options": ["Model benchmark accuracy", "Share of eligible losses that become reviewed claims", "GPU hours", "PDF render time"], "answer": 1, "hint": "What failed before was filing at all.", "why": "The wedge is filing conversion: turning losses that never got filed into reviewed claims." },
+    "chk-channels": { "q": "How is a Twilio webhook proven genuine?", "options": ["A shared password in the URL", "HMAC-SHA1 over the URL + sorted params, checked in _verify_twilio_signature", "It is not checked", "TLS alone"], "answer": 1, "hint": "app/main.py.", "why": "_verify_twilio_signature recomputes HMAC-SHA1(auth_token, url+sorted params); Bird uses HMAC-SHA256, Telegram a secret header." },
+    "chk-failclosed": { "q": "If a channel's signing secret is unset, the webhook...", "options": ["accepts everything", "rejects the request (fail-closed)", "crashes", "uses a default"], "answer": 1, "hint": "SEC-008.", "why": "An unconfigured secret makes the endpoint reject, so a misconfiguration never opens the door to forged claims." },
+    "chk-rate": { "q": "What does IPRateLimiter protect and how?", "options": ["All routes, by IP ban", "/api and /auth, ~60 requests per IP per minute via a sliding window", "Only /healthz", "Nothing"], "answer": 1, "hint": "middlewares.py deque per IP.", "why": "It keeps a per-IP deque of timestamps, drops expired ones, and returns 429 past 60/min on /api and /auth." },
+    "chk-headers": { "q": "Which does SecurityHeaders NOT set?", "options": ["X-Frame-Options: DENY", "Strict-Transport-Security", "A plaintext admin password", "Content-Security-Policy"], "answer": 2, "hint": "It adds OWASP headers.", "why": "It sets X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP, HSTS and removes the server header; never a password." },
+    "chk-intake": { "q": "If persisting the claim fails, process_inbound...", "options": ["crashes silently", "still saves best-effort and still replies to the farmer", "retries forever", "deletes the claim"], "answer": 1, "hint": "try/except around claims_repo.save.", "why": "It degrades to a best-effort save and always sends the reply, prioritizing farmer experience over strict consistency." },
+    "chk-vision": { "q": "How is Qwen-VL output made safe to use in code?", "options": ["Trust the prose", "A strict JSON prompt parsed into a typed DamageAssessment", "OCR the reply", "Ask twice"], "answer": 1, "hint": "json_mode.", "why": "A strict JSON, conservative prompt yields a typed DamageAssessment, turning the model into a reliable typed function." },
+    "chk-forensics": { "q": "Why does forensics combine EXIF, perceptual hashing, and a VL check?", "options": ["To waste time", "Defense in depth: each catches a different kind of fake", "One was broken", "Marketing"], "answer": 1, "hint": "perceptual_hash + EXIF + VL.", "why": "EXIF (metadata), perceptual hash (reuse of a known image), and a VL authenticity check each detect a different manipulation." },
+    "chk-weather": { "q": "How does summarize_window flag a likely drought?", "options": ["Guesses", "consecutive_dry_days via _max_run over daily precipitation", "Reads the photo", "Random"], "answer": 1, "hint": "_max_run(precip, p<1.0).", "why": "It aggregates Open-Meteo daily data into signals like consecutive_dry_days and days_with_heavy_rain to test the damage cause." },
+    "chk-rag": { "q": "How does one embedding serve both RAG and fraud?", "options": ["Two models", "Similar past claims are helpful precedents and near-duplicate risk from the same search", "Regex only", "It does not"], "answer": 1, "hint": "Same vectors, two readings.", "why": "The same similarity surfaces useful precedents for the adjuster and suspicious near-duplicates for fraud_check." },
+    "chk-vector": { "q": "How are Chroma and DashVector interchangeable?", "options": ["They are the same", "Both implement the VectorStore ABC; get_store() picks one from config", "Copy-paste", "They are not"], "answer": 1, "hint": "vector_store.py.", "why": "VectorStore is an abstract base; ChromaStore and DashVectorStore implement it and get_store() returns one based on settings.vector_store." },
+    "chk-output": { "q": "Why translate templated status messages instead of free-generating replies?", "options": ["Cheaper only", "To bound what the bot can say so it never overpromises a payout", "Templates look nicer", "The model can't translate"], "answer": 1, "hint": "regulated message.", "why": "Translating fixed templates keeps farmer-facing copy controlled, avoiding accidental payout promises." },
+    "chk-review": { "q": "What does get_claim add on top of the stored claim?", "options": ["Nothing", "Top-3 similar past claims and fraud flags", "Bank details", "A new PDF"], "answer": 1, "hint": "find_similar + fraud_check.", "why": "get_claim calls past_claim_rag.find_similar(k=3) and fraud_check.check, bundling evidence for one decision." },
+    "chk-authz": { "q": "What happens to a legacy PBKDF2 password on next login?", "options": ["Rejected", "Verified, then transparently rehashed to Argon2id (needs_rehash)", "Left as PBKDF2 forever", "Emailed"], "answer": 1, "hint": "passwords.py.", "why": "verify_password accepts legacy PBKDF2 and needs_rehash triggers an upgrade to Argon2id on successful sign-in." },
+    "chk-data": { "q": "Why move from SQLite to Postgres in production?", "options": ["Trendier", "On Function Compute SQLite lives in ephemeral /tmp and is wiped on recycle", "SQLite can't store text", "More RAM"], "answer": 1, "hint": "why the seed exists.", "why": "FC's /tmp is ephemeral, so SQLite data does not survive; DATABASE_URL points at Postgres for durability." },
+    "chk-extend": { "q": "How do you switch identity or payment providers?", "options": ["Rewrite the app", "Swap the implementation behind the Protocol/interface, selected by config", "Fork the repo", "You can't"], "answer": 1, "hint": "MockProvider/PersonaProvider; PlanCode.", "why": "identity_verification and payments define interfaces with multiple implementations chosen by settings, so swapping is config, not code." },
+    "chk-deploy": { "q": "Why does the Dockerfile CMD exec uvicorn directly instead of 'uv run'?", "options": ["uv run doesn't exist", "'uv run' re-syncs the project at startup, slowing cold starts", "To hide it", "uvicorn requires it"], "answer": 1, "hint": "cold start.", "why": "Calling the venv's uvicorn avoids uv re-resolving project metadata on every Function Compute cold start." }
   },
   "diagrams": {
-    "d-system": { "title": "System map", "code": "flowchart LR\n  TG[Telegram] --> WH[Webhooks]\n  WA[WhatsApp] --> WH\n  WH --> PIPE[Agent pipeline]\n  PIPE --> VL[Qwen-VL-Max]\n  PIPE --> QM[Qwen-Max]\n  PIPE --> OM[Open-Meteo]\n  PIPE --> DV[(DashVector)]\n  PIPE --> DB[(SQLite)]\n  WEB[Next.js console] --> DB" },
-    "d-journey": { "title": "Photo to filed claim", "code": "sequenceDiagram\n  participant F as Farmer\n  participant P as process_inbound\n  participant VL as Qwen-VL\n  participant A as Adjuster\n  F->>P: photo\n  P->>VL: assess_damage\n  P-->>F: localized reply\n  A->>A: review + fraud\n  A-->>F: approved" },
-    "d-data": { "title": "Where data lives", "code": "flowchart TD\n  C[Claim] --> SQL[(SQLite record)]\n  C --> OSS[(OSS photo + PDF)]\n  C --> DV[(DashVector embedding)]" }
+    "d-system": { "title": "System map", "code": "flowchart LR\n  TG[Telegram] --> WH[Webhooks + verify]\n  WA[WhatsApp] --> WH\n  WH --> MID[Rate limit + headers]\n  MID --> PIPE[Agent pipeline]\n  PIPE --> VL[Qwen-VL-Max]\n  PIPE --> QM[Qwen-Max]\n  PIPE --> OM[Open-Meteo]\n  PIPE --> DV[(DashVector)]\n  PIPE --> DB[(SQLModel)]\n  PIPE --> OSS[(OSS)]\n  WEB[Next.js console] --> API[api_claims]\n  API --> DB" },
+    "d-pipeline": { "title": "The intake pipeline", "code": "flowchart TD\n  IN[verified payload] --> LANG[detect_language]\n  LANG --> DMG[assess_damage Qwen-VL]\n  DMG --> FOR[photo_forensics]\n  FOR --> WX[weather corroborate]\n  WX --> DRAFT[build_claim]\n  DRAFT --> PDF[render_claim_pdf]\n  PDF --> SAVE[save + index_claim]\n  SAVE --> REPLY[localized status_message]\n  SAVE --> REVIEW[adjuster console]\n  REVIEW --> EV[find_similar + fraud_check]" },
+    "d-auth": { "title": "Role hierarchy", "code": "flowchart LR\n  owner --> admin --> moderator --> reviewer --> farmer" },
+    "d-data": { "title": "Where data lives", "code": "flowchart TD\n  C[Claim] --> SQL[(SQLModel record)]\n  C --> OSS[(OSS photo + PDF)]\n  C --> DV[(DashVector embedding)]\n  A[Every decision] --> AUD[(append-only audit log)]" }
   },
   "repoMap": {
     "name": "claimfarm", "kind": "dir", "path": ".", "role": "the whole project",
     "children": [
-      { "name": "app", "kind": "dir", "path": "app", "role": "FastAPI backend and agent brain", "importance": 3, "children": [
-        { "name": "main.py", "kind": "file", "path": "app/main.py", "role": "app, webhooks, signature checks", "importance": 3 },
-        { "name": "agents", "kind": "dir", "path": "app/agents", "role": "one focused AI step per file", "importance": 3, "children": [
-          { "name": "whatsapp_intake.py", "kind": "file", "path": "app/agents/whatsapp_intake.py", "role": "the orchestrator", "importance": 3 },
-          { "name": "damage_assessor.py", "kind": "file", "path": "app/agents/damage_assessor.py", "role": "Qwen-VL reads the photo", "importance": 3 }
-        ] },
-        { "name": "api_claims.py", "kind": "file", "path": "app/api_claims.py", "role": "console API; review + decision", "importance": 3 }
+      { "name": "app", "kind": "dir", "path": "app", "role": "FastAPI backend + agents", "importance": 3, "children": [
+        { "name": "main.py", "kind": "file", "path": "app/main.py", "role": "webhooks + signature verification", "importance": 3 },
+        { "name": "middlewares.py", "kind": "file", "path": "app/middlewares.py", "role": "rate limit + security headers", "importance": 2 },
+        { "name": "agents", "kind": "dir", "path": "app/agents", "role": "nine focused AI steps", "importance": 3 },
+        { "name": "clients", "kind": "dir", "path": "app/clients", "role": "twelve external-service wrappers", "importance": 3 },
+        { "name": "auth", "kind": "dir", "path": "app/auth", "role": "passwords, tokens, sessions, RBAC", "importance": 2 },
+        { "name": "storage", "kind": "dir", "path": "app/storage", "role": "repos, db, audit log, photo store", "importance": 2 },
+        { "name": "api_claims.py", "kind": "file", "path": "app/api_claims.py", "role": "console API: review + decision", "importance": 3 }
       ] },
-      { "name": "web", "kind": "dir", "path": "web", "role": "Next.js console + marketing", "importance": 2 },
+      { "name": "tests", "kind": "dir", "path": "tests", "role": "pytest suite incl the pipeline test", "importance": 2 },
+      { "name": "mock_insurer", "kind": "dir", "path": "mock_insurer", "role": "fake carrier mounted at /insurer", "importance": 1 },
       { "name": "Dockerfile", "kind": "file", "path": "Dockerfile", "role": "builds the backend image", "importance": 1 }
     ]
   },
   "modules": [
     {
-      "id": "m-story", "title": "The five-minute story", "summary": "What ClaimFarm is, in one breath.", "icon": "BookOpen",
+      "id": "m-orient", "title": "Orientation", "summary": "What it is and who it serves.", "icon": "BookOpen",
       "lessons": [
         {
-          "id": "l-story", "type": "story", "title": "What is ClaimFarm?", "est": 6, "conceptIds": ["c-story"],
-          "summary": "ClaimFarm turns a single crop photo sent over Telegram or WhatsApp into a filed crop-insurance claim.",
+          "id": "l-story", "type": "story", "title": "What ClaimFarm is", "est": 7, "conceptIds": ["c-story"],
+          "summary": "A single crop photo over Telegram or WhatsApp becomes a filed insurance claim, with a human approving before it is sent.",
           "sections": {
-            "what": "A chat-to-claim autopilot: AI reads the photo, checks the weather, drafts the claim, and a human approves it.",
-            "why": "To collapse a multi-page, multi-language, evidence-heavy form into one photo.",
-            "how": "A webhook runs an ordered agent pipeline that assesses, corroborates, drafts, and routes a claim to an adjuster.",
-            "connects": "Messaging channels in front; Qwen Cloud, Open-Meteo, DashVector, OSS in the middle; a Next.js console at the end.",
-            "ifChanged": "Remove the human approval and it becomes automatic payouts, which insurers reject and fraud exploits."
+            "what": "A multimodal agent pipeline on FastAPI: a messaging webhook runs ordered agents (vision, forensics, weather, RAG, drafting, multilingual), persists a Claim, and surfaces it in a Next.js adjuster console.",
+            "why": "To collapse a multi-page, multi-language, evidence-heavy form into one photo so far more farmers actually file.",
+            "how": "process_inbound assesses the photo and replies fast; the adjuster later opens the claim, sees assembled evidence, and approves; post_decision files to the insurer.",
+            "connects": "Channels in front; Qwen Cloud, Open-Meteo, DashVector, OSS in the middle; a console and insurer API at the end.",
+            "ifChanged": "Remove the human checkpoint and it becomes automatic payouts, which insurers reject and fraud exploits."
           },
           "analogy": "Like a tax app that files your whole return from one receipt photo, but an accountant still signs off.",
-          "sourceIds": ["s-readme", "s-intake"], "diagram": "d-system",
-          "checks": ["chk-story", "chk-hitl"],
-          "teachBack": "Explain ClaimFarm to a non-technical friend in two sentences, without saying 'AI'."
-        }
-      ]
-    },
-    {
-      "id": "m-problem", "title": "The problem", "summary": "Why this is worth building.", "icon": "Lightbulb",
-      "lessons": [
+          "insight": "The orchestrator is deterministic Python, not an LLM planner, so latency and failure modes stay bounded inside a webhook timeout.",
+          "diagram": "d-system", "sourceIds": ["s-readme", "s-intake"], "checks": ["chk-story"],
+          "teachBack": "Explain ClaimFarm to a teammate in three sentences, naming the two user types."
+        },
         {
-          "id": "l-problem", "type": "concept", "title": "Why most farmers never file", "est": 6, "conceptIds": ["c-problem"],
-          "summary": "Around 500 million smallholder farmers face crop loss, but fewer than 20% ever file a claim.",
+          "id": "l-problem", "type": "concept", "title": "The problem and the product", "est": 8, "conceptIds": ["c-problem"],
+          "summary": "Fewer than 20% of eligible smallholder farmers ever file a claim; ClaimFarm is a real two-sided SaaS that removes the blockers.",
           "sections": {
-            "what": "A conversion problem: eligible losses that never become filed claims.",
-            "why": "The blockers are language, the demand for structured evidence, and assumed literacy.",
-            "how": "ClaimFarm removes all three at the point of contact: any language in, evidence from a photo, no forms.",
-            "connects": "Two user types: farmers (chat) and adjusters (the console).",
-            "ifChanged": "If the target were a large agribusiness, a photo-first chat interface would be the wrong tool."
+            "what": "A conversion problem: eligible losses that never become filed claims because of language, evidence, and literacy barriers.",
+            "why": "The value is unlocking claims that never happened, not shaving minutes off existing ones.",
+            "how": "Farmers touch only a chat channel in their own language; adjusters and staff use the console, auth, RBAC, billing, and identity surfaces the repo actually ships.",
+            "connects": "Every design choice (multilingual replies, photo-as-evidence, a human checkpoint) serves filing conversion.",
+            "ifChanged": "Target a large insured agribusiness instead and the photo-first chat interface would be the wrong tool."
           },
-          "example": "A farmer who reads only Telugu, with no scanner, produces a complete claim from a phone photo.",
-          "sourceIds": ["s-readme"], "checks": ["chk-metric"],
+          "example": "A farmer who reads only Telugu with no scanner produces a complete, evidence-backed claim from a phone photo.",
+          "sourceIds": ["s-readme"], "checks": ["chk-problem"],
           "teachBack": "Explain why '<20% file' makes this a conversion problem, not an accuracy problem."
         }
       ]
     },
     {
-      "id": "m-arch", "title": "Architecture and journey", "summary": "How it connects and how one request flows.", "icon": "Network",
+      "id": "m-in", "title": "Getting in safely", "summary": "Channels, webhook trust, and hardening.", "icon": "ShieldCheck",
       "lessons": [
         {
-          "id": "l-arch", "type": "architecture", "title": "From a message to the backend", "est": 8, "conceptIds": ["c-arch"],
-          "summary": "Every channel calls a webhook on the FastAPI backend, which verifies it and runs one shared pipeline.",
+          "id": "l-channels", "type": "architecture", "title": "Channels and webhook verification", "est": 12, "conceptIds": ["c-channels"],
+          "summary": "Three messaging providers each call a webhook in main.py; each is verified with a different scheme before any work runs, and all funnel into one pipeline.",
           "sections": {
-            "what": "A webhook front door with per-provider verification feeding one shared pipeline.",
-            "why": "So any messaging channel can be added without touching the agents.",
-            "how": "main.py verifies the caller (Twilio HMAC-SHA1, Bird HMAC-SHA256, Telegram secret) then runs process_inbound.",
-            "connects": "Channels in; agents and storage out; the console reads results separately.",
-            "ifChanged": "Skip verification and anyone could POST fake claims into the queue."
+            "what": "Routes twilio_inbound, bird_inbound, and telegram_inbound, each with a matching verifier, feeding whatsapp_intake.process_inbound (and its Bird/Telegram variants).",
+            "why": "The signature check is the trust boundary; without it anyone could POST fake claims into the queue.",
+            "how": "_verify_twilio_signature recomputes HMAC-SHA1 over url + sorted params; _verify_bird_signature uses HMAC-SHA256 over the raw body; _verify_telegram_secret compares a secret header. Work runs in a BackgroundTask so the 200 returns within the provider timeout.",
+            "connects": "Each provider payload is normalized to one internal shape, so the agents never care which app the farmer used.",
+            "ifChanged": "An unconfigured secret makes the route reject (SEC-008 fail-closed), so a misconfiguration can never silently open the door."
           },
-          "warning": "An unconfigured webhook secret makes the endpoint reject requests, so a misconfiguration never opens the door.",
-          "sourceIds": ["s-main"], "diagram": "d-system", "checks": ["chk-failclosed"],
-          "teachBack": "Explain the fail-closed webhook decision and why it matters here."
+          "warning": "Verification happens before the pipeline; a request that fails the signature check is rejected with 403 and never reaches an agent.",
+          "diagram": "d-system", "sourceIds": ["s-main", "s-main-seed"], "checks": ["chk-channels", "chk-failclosed"],
+          "teachBack": "Name the three verification schemes and why unconfigured secrets fail closed."
         },
         {
-          "id": "l-flow", "type": "request-flow", "title": "Inside process_inbound", "est": 8, "conceptIds": ["c-journey"],
-          "summary": "Follow one photo: download, detect language, assess, corroborate, draft, save, reply.",
+          "id": "l-hardening", "type": "code-walkthrough", "title": "Rate limiting and security headers", "est": 11, "conceptIds": ["c-hardening"], "techIds": ["t-fastapi"],
+          "summary": "Two Starlette middlewares protect every request: a per-IP rate limiter on sensitive prefixes and OWASP security headers on every response.",
           "sections": {
-            "what": "The synchronous orchestrator that turns one photo into a saved, pending claim.",
-            "why": "It is the single place the whole intake sequence lives, in order.",
-            "how": "It base64-encodes the photo for Qwen-VL, builds a claim, renders a PDF, saves, and replies in the farmer's language.",
-            "connects": "Similar-claims and fraud are deferred to get_claim at review time, keeping the reply fast.",
-            "ifChanged": "If saving fails it still replies, prioritizing farmer experience over strict consistency."
+            "what": "IPRateLimiter (a BaseHTTPMiddleware) throttles /api and /auth per client IP; SecurityHeaders adds OWASP headers to every response.",
+            "why": "Cheap, always-on defenses against brute force and common web attacks, independent of the routes.",
+            "how": "The limiter keeps a per-IP deque of monotonic timestamps, evicts entries older than the window, and returns 429 with Retry-After past 60/min. SecurityHeaders sets X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP, and HSTS, and strips the server header.",
+            "connects": "Registered in main.py around the app; a real deployment fronts this with a CDN/WAF for distributed limiting.",
+            "ifChanged": "Drop the limiter and /auth is open to credential stuffing; drop the headers and the app loses clickjacking and MIME-sniffing protection."
           },
-          "flow": [
-            { "actor": "download_media", "action": "fetches the photo bytes" },
-            { "actor": "assess_damage", "action": "asks Qwen-VL for crop, cause, severity as JSON" },
-            { "actor": "corroborate", "action": "cross-checks Open-Meteo weather" },
-            { "actor": "build_claim", "action": "drafts the claim and renders a PDF" },
-            { "actor": "status_message", "action": "replies to the farmer in their language" }
+          "walkthrough": [
+            { "src": "s-mid", "code": "class IPRateLimiter(BaseHTTPMiddleware):\n    async def dispatch(self, request, call_next):\n        path = request.url.path\n        if not any(path.startswith(p) for p in self.protected):\n            return await call_next(request)\n        ip = request.client.host if request.client else \"anon\"\n        now = time.monotonic()\n        with self._lock:\n            dq = self._hits.setdefault(ip, deque())\n            while dq and (now - dq[0]) > self.window: dq.popleft()\n            if len(dq) >= self.rate:\n                return JSONResponse({\"detail\": \"rate limit exceeded\"}, status_code=429,\n                                    headers={\"Retry-After\": str(self.window)})\n            dq.append(now)\n        return await call_next(request)", "note": "A sliding-window counter per IP: evict expired timestamps, reject past the rate.", "highlight": [9, 10] },
+            { "src": "s-mid", "code": "h.setdefault(\"X-Frame-Options\", \"DENY\")\nh.setdefault(\"X-Content-Type-Options\", \"nosniff\")\nh.setdefault(\"Referrer-Policy\", \"no-referrer\")\nh.setdefault(\"Strict-Transport-Security\", \"max-age=31536000\")", "note": "setdefault means it never overrides headers a route set on purpose.", "highlight": [4] }
           ],
-          "sourceIds": ["s-intake", "s-gps", "s-api"], "diagram": "d-journey", "checks": ["chk-defer"],
-          "activity": "Open app/agents/whatsapp_intake.py and list process_inbound's calls in order."
+          "sourceIds": ["s-mid"], "checks": ["chk-rate", "chk-headers"],
+          "teachBack": "Explain how the per-IP sliding window works and one header and what it prevents."
         }
       ]
     },
     {
-      "id": "m-agents", "title": "The agent pipeline", "summary": "What each agent does and how it stays reliable.", "icon": "Cpu",
+      "id": "m-intake", "title": "The intake pipeline", "summary": "One photo, end to end.", "icon": "Route",
       "lessons": [
         {
-          "id": "l-vision", "type": "code-walkthrough", "title": "Seeing the photo", "est": 8, "conceptIds": ["c-agents"], "techIds": ["t-qwenvl", "t-embed"],
-          "summary": "Qwen-VL reads the photo with a strict JSON prompt; forensics checks the photo is authentic.",
+          "id": "l-intake", "type": "request-flow", "title": "Inside process_inbound", "est": 12, "conceptIds": ["c-intake"],
+          "summary": "The 894-line whatsapp_intake orchestrates the whole synchronous pipeline and guarantees the farmer always gets a reply.",
           "sections": {
-            "what": "The vision layer: a typed damage report plus an authenticity check.",
-            "why": "Everything downstream depends on a trustworthy read of the photo.",
-            "how": "A strict JSON prompt yields a DamageAssessment; forensics combines EXIF, perceptual hash, and a VL authenticity check.",
-            "connects": "Feeds the weather step and the adjuster's fraud view.",
-            "ifChanged": "Drop json_mode and downstream parsing becomes fragile."
+            "what": "process_inbound downloads the photo, detects language, calls assess_damage, corroborates weather, builds the Claim, renders a PDF, saves and indexes it, and replies in the farmer's language.",
+            "why": "It is the single ordered place the intake sequence lives, so behavior is easy to reason about.",
+            "how": "The photo is base64-encoded into a data URL for Qwen-VL; a Farmer is built (a default GPS is used when no location is shared, with a location-share keyboard offered on Telegram); persistence is wrapped in try/except so a save failure still replies.",
+            "connects": "Calls damage_assessor, weather_corroborator, claim_drafter, multilingual, claims_repo, and the channel client.",
+            "ifChanged": "Reorder corroborate before assess_damage and the weather step has no damage cause to test against."
+          },
+          "example": "No photo in the message and process_inbound short-circuits with a prompt to send one, never running the AI.",
+          "warning": "The default GPS is an explicit demo shortcut; production requires an opt-in location share, which the Telegram flow already scaffolds.",
+          "diagram": "d-pipeline", "sourceIds": ["s-intake", "s-intake-loc"], "checks": ["chk-intake"],
+          "teachBack": "List process_inbound's calls in order, from download to reply."
+        },
+        {
+          "id": "l-vision", "type": "code-walkthrough", "title": "Vision: Qwen-VL to typed JSON", "est": 12, "conceptIds": ["c-vision"], "techIds": ["t-qwenvl", "t-qwenmax", "t-embed"],
+          "summary": "damage_assessor turns a free-form vision model into a typed function by demanding strict JSON, parsed into a DamageAssessment.",
+          "sections": {
+            "what": "assess_damage sends the photo to Qwen-VL with a conservative, JSON-only system prompt and parses the result into the DamageAssessment model.",
+            "why": "Downstream code branches on fields like severity and confidence, so the output must be structured and trustworthy.",
+            "how": "qwen.py reaches Qwen via the OpenAI SDK (DashScope is OpenAI-compatible); vision_chat passes the image as an image_url content part with json_mode; the prompt forbids inventing symptoms and says to use low confidence when unsure.",
+            "connects": "The DamageAssessment feeds weather corroboration (it needs a damage cause) and the adjuster's evidence view.",
+            "ifChanged": "Drop json_mode and the strict prompt and parsing into DamageAssessment becomes fragile."
           },
           "walkthrough": [
-            { "src": "s-damage", "code": "SYSTEM_PROMPT = \"\"\"\\\nYou are a crop insurance damage assessor.\nIdentify crop, cause, a severity 0-100, and confidence.\nBe conservative. Return STRICT JSON only.\n\"\"\"", "note": "The prompt forbids invented symptoms and demands JSON-only output.", "highlight": [4] },
-            { "src": "s-qwen", "code": "resp = client.chat.completions.create(\n  model=s.qwen_vl_model,\n  messages=[{\"role\":\"user\",\"content\":[\n    {\"type\":\"image_url\",\"image_url\":{\"url\": image}},\n    {\"type\":\"text\",\"text\": user_text}]}],\n)", "note": "The photo is passed as an image_url content part, the OpenAI SDK shape.", "highlight": [4] }
+            { "src": "s-damage", "code": "SYSTEM_PROMPT = \"\"\"\\\nYou are a crop insurance damage assessor.\nIdentify the crop, whether damage is present, the primary cause,\na severity score (0-100), affected area %, and your confidence.\nBe conservative. If unsure, say so via low confidence.\nReturn STRICT JSON only.\n\"\"\"", "note": "The prompt is the reliability mechanism: conservative, JSON-only.", "highlight": [6] },
+            { "src": "s-qwen", "code": "resp = client.chat.completions.create(\n  model=s.qwen_vl_model,\n  messages=[{\"role\":\"user\",\"content\":[\n    {\"type\":\"image_url\",\"image_url\":{\"url\": image}},\n    {\"type\":\"text\",\"text\": user_text}]}],\n)", "note": "Same call shape as the OpenAI SDK; only base_url and model change.", "highlight": [4] }
           ],
-          "callouts": [],
-          "example": "A stock-photo screenshot is flagged via missing EXIF and a perceptual-hash match even if the crop looks real.",
-          "sourceIds": ["s-damage", "s-forensics", "s-qwen"], "checks": ["chk-json"],
+          "sourceIds": ["s-damage", "s-qwen"], "checks": ["chk-vision"],
           "teachBack": "Explain how strict JSON output makes an LLM behave like a typed function."
         },
         {
-          "id": "l-corroborate", "type": "concept", "title": "Weather, RAG, and fraud", "est": 7, "conceptIds": ["c-agents", "c-data"], "techIds": ["t-dashvector", "t-embed"],
-          "summary": "Independent checks ground the AI's verdict: weather history, similar past claims, and fraud signals.",
+          "id": "l-forensics", "type": "concept", "title": "Photo forensics", "est": 11, "conceptIds": ["c-forensics"],
+          "summary": "Before trusting a photo, forensics stacks three independent checks so no single spoof passes.",
           "sections": {
-            "what": "The corroboration layer: independent checks on the AI's read.",
-            "why": "To ground one model's verdict in weather data and precedent.",
-            "how": "Open-Meteo for weather; embeddings + DashVector for similar claims; fraud is similarity-based.",
-            "connects": "New claims are indexed on save, so they become findable for the next farmer.",
-            "ifChanged": "Empty the past-claims collection and fraud-by-similarity has nothing to compare against."
+            "what": "photo_forensics combines EXIF inspection, perceptual hashing, and a Qwen-VL authenticity prompt into a forensics verdict.",
+            "why": "A claim is only as trustworthy as its evidence; each check covers a different attack.",
+            "how": "perceptual_hash computes an average_hash and compares with hamming_distance via find_close_matches to catch reused/known images; EXIF flags missing/edited metadata; the VL prompt flags AI-generated or screenshot content.",
+            "connects": "Runs on the downloaded bytes inside intake; results surface to the adjuster alongside fraud flags.",
+            "ifChanged": "Rely on EXIF alone and a re-encoded screenshot (EXIF stripped) would pass; the perceptual hash still catches reuse."
           },
-          "insight": "One embedding serves two jobs: helpful precedents for the adjuster and near-duplicate risk for fraud.",
-          "sourceIds": ["s-weather", "s-rag"], "diagram": "d-data", "checks": ["chk-embed"]
-        },
-        {
-          "id": "l-draft", "type": "concept", "title": "Drafting and speaking the language", "est": 6, "conceptIds": ["c-agents"], "techIds": ["t-qwenmax"],
-          "summary": "Qwen-Max drafts the claim PDF; templated, translated status messages reply to the farmer.",
-          "sections": {
-            "what": "The output layer: a PDF claim plus a localized human reply.",
-            "why": "The farmer needs an understandable response; the insurer needs a document.",
-            "how": "WeasyPrint renders the PDF from an HTML template; status text is translated, not free-generated.",
-            "connects": "The PDF is stored in OSS with signed URLs.",
-            "ifChanged": "Free-generating replies risks promising a payout the system cannot guarantee."
-          },
-          "warning": "Replies translate fixed templates, so the bot never accidentally promises a payout.",
-          "sourceIds": ["s-drafter"],
-          "teachBack": "Explain when ClaimFarm uses Qwen-VL vs Qwen-Max vs embeddings, one example each."
+          "example": "A stock-photo screenshot is flagged by missing EXIF plus a perceptual-hash match even though the crop looks real.",
+          "walkthrough": [
+            { "src": "s-phash", "code": "def hamming_distance(a: int, b: int) -> int:\n    return bin(a ^ b).count(\"1\")\n\ndef find_close_matches(target: int, known, max_distance: int = 5):\n    return [m for m in known if hamming_distance(target, m.hash) <= max_distance]", "note": "Near-identical images differ in only a few bits, so a small Hamming distance means reuse.", "highlight": [5] }
+          ],
+          "sourceIds": ["s-forensics", "s-phash"], "checks": ["chk-forensics"],
+          "teachBack": "Explain why three checks beat one, with a concrete example each catches."
         }
       ]
     },
     {
-      "id": "m-ship", "title": "Data, tradeoffs, mastery", "summary": "State, honest limits, and the pitch.", "icon": "Rocket",
+      "id": "m-corr", "title": "Corroboration and retrieval", "summary": "Grounding the verdict.", "icon": "Network",
       "lessons": [
         {
-          "id": "l-data", "type": "concept", "title": "Where data lives", "est": 6, "conceptIds": ["c-data"], "techIds": ["t-fc"],
-          "summary": "Three stores by shape: SQL for records, OSS for files, DashVector for embeddings.",
+          "id": "l-weather", "type": "code-walkthrough", "title": "Weather corroboration", "est": 12, "conceptIds": ["c-weather"], "techIds": ["t-openmeteo"],
+          "summary": "weather.py turns 30 days of Open-Meteo history into drought/flood signals that independently test the damage cause.",
           "sections": {
-            "what": "Three stores chosen by data shape.",
-            "why": "Records, files, and semantic search have different access patterns.",
-            "how": "SQLModel for claims, OSS for photos/PDFs, DashVector for embeddings.",
-            "connects": "On Function Compute the SQLite file is in ephemeral /tmp, hence the startup demo seed.",
-            "ifChanged": "Keep SQLite in production and data vanishes when the instance recycles."
+            "what": "summarize_window pulls daily weather for the farmer's location and aggregates it into a WeatherSummary; weather_corroborator judges whether it supports the claimed cause.",
+            "why": "It grounds one model's photo verdict in an independent, keyless data source, reducing reliance on the vision call.",
+            "how": "It computes totals and counts (days_with_heavy_rain > 30mm, days_above_35c, days_with_frost) and runs like consecutive_dry_days via _max_run over daily precipitation.",
+            "connects": "The summary is passed with the DamageAssessment into build_claim so the drafted claim reflects corroboration.",
+            "ifChanged": "A 'drought' verdict is strengthened by many consecutive_dry_days and weakened by high total_precip_mm."
           },
-          "sourceIds": ["s-config"], "diagram": "d-data", "checks": ["chk-sqlite"]
+          "walkthrough": [
+            { "src": "s-weather", "code": "def _max_run(values, predicate) -> int:\n    best = run = 0\n    for v in values:\n        if predicate(v): run += 1; best = max(best, run)\n        else: run = 0\n    return best\n\n# ...\nconsecutive_dry_days=_max_run(precip, lambda p: p < 1.0)", "note": "The longest streak of dry days is a strong drought signal.", "highlight": [9] }
+          ],
+          "sourceIds": ["s-weather", "s-corr"], "checks": ["chk-weather"],
+          "teachBack": "Explain how consecutive_dry_days is computed and why it corroborates a drought claim."
         },
         {
-          "id": "l-tradeoffs", "type": "comparison", "title": "Tradeoffs and the pitch", "est": 8, "conceptIds": ["c-tradeoffs"],
-          "summary": "Be honest about the seams. Each demo shortcut has a named production fix.",
+          "id": "l-rag", "type": "architecture", "title": "The vector store, RAG, and fraud", "est": 13, "conceptIds": ["c-rag", "c-data"], "techIds": ["t-vector", "t-embed"],
+          "summary": "One embedding representation powers both helpful retrieval and similarity-based fraud, behind a swappable VectorStore interface.",
           "sections": {
-            "what": "A map of what is real, what is scoped for the demo, and the upgrade path.",
+            "what": "vector_store defines a VectorStore ABC with ChromaStore (local) and DashVectorStore (prod) implementations; get_store() returns one based on config. past_claim_rag and agronomy_rag query it; fraud_check reads similarity.",
+            "why": "Abstracting the store means the agents never change when you swap providers, and one representation serves two purposes.",
+            "how": "Claims are embedded with text-embedding-v3 and indexed on save (claims_repo calls index_claim); find_similar(k=3) retrieves precedents; fraud_check flags near-duplicates by high similarity.",
+            "connects": "Retrieval results and fraud flags are assembled by api_claims.get_claim for the adjuster.",
+            "ifChanged": "Empty the past-claims collection and fraud-by-similarity has nothing to compare against, so it must be populated on save."
+          },
+          "insight": "Same vectors, two readings: 'similar past claim' is a helpful precedent for the adjuster and a near-duplicate risk for fraud.",
+          "walkthrough": [
+            { "src": "s-vector", "code": "class VectorStore(ABC):\n    @abstractmethod\n    def upsert(self, docs: list[VectorDoc]) -> None: ...\n    @abstractmethod\n    def query(self, embedding, k: int = 5) -> list[QueryHit]: ...\n\ndef get_store() -> VectorStore:\n    return DashVectorStore() if get_settings().vector_store == \"dashvector\" else ChromaStore()", "note": "One interface, two implementations, chosen by config.", "highlight": [8] }
+          ],
+          "diagram": "d-data", "sourceIds": ["s-vector", "s-rag", "s-fraud", "s-claimsrepo"], "checks": ["chk-rag", "chk-vector"],
+          "teachBack": "Explain how swapping Chroma for DashVector requires no change to the agents."
+        }
+      ]
+    },
+    {
+      "id": "m-out", "title": "Output and the human", "summary": "Drafting, replying, and deciding.", "icon": "Rocket",
+      "lessons": [
+        {
+          "id": "l-output", "type": "concept", "title": "Drafting the PDF and speaking the language", "est": 10, "conceptIds": ["c-output"], "techIds": ["t-weasyprint", "t-qwenmax", "t-oss"],
+          "summary": "Qwen-Max drafts the claim, WeasyPrint renders it to PDF, and farmer replies are translated templates, not free text.",
+          "sections": {
+            "what": "claim_drafter.build_claim assembles the Claim and render_claim_pdf renders an HTML/Jinja2 template through WeasyPrint; multilingual detects the language and localizes status messages.",
+            "why": "The insurer needs a document; the farmer needs an understandable, controlled reply.",
+            "how": "The PDF is written and stored in OSS with signed URLs; status_message/localize translate fixed templates via Qwen-Max rather than generating each reply.",
+            "connects": "Consumes the DamageAssessment + WeatherSummary; the PDF path is saved on the Claim for the console.",
+            "ifChanged": "Free-generate replies and the bot might promise a payout it cannot guarantee, a real risk in a regulated message."
+          },
+          "warning": "Replies translate fixed templates, so the model never invents a promise to the farmer.",
+          "sourceIds": ["s-drafter", "s-multi"], "checks": ["chk-output"],
+          "teachBack": "Explain when the app uses Qwen-VL vs Qwen-Max vs the embedding model, one example each."
+        },
+        {
+          "id": "l-review", "type": "request-flow", "title": "The adjuster console decision", "est": 11, "conceptIds": ["c-review"],
+          "summary": "The console reads an assembled evidence bundle and writes exactly one decision that files the claim and notifies the farmer.",
+          "sections": {
+            "what": "install_api wires read endpoints (list_claims, get_claim, get_claim_photo, get_localized_reply) and the write endpoint post_decision, all behind require_auth.",
+            "why": "This is the human-in-the-loop boundary and the read/write split of the whole system.",
+            "how": "get_claim calls past_claim_rag.find_similar(k=3) and fraud_check.check on demand; post_decision flips ClaimStatus, calls the insurer client, and _notify_farmer sends a localized message. A no-cache middleware keeps the JSON fresh.",
+            "connects": "Consumed by the Next.js console in web/; lazy evidence computation keeps the farmer's intake reply fast.",
+            "ifChanged": "Auto-approve high-confidence claims and you remove the fraud backstop the insurer relies on."
+          },
+          "example": "Opening claim CF-123 triggers a DashVector lookup for 3 similar claims and a fraud scan, returned in one get_claim response.",
+          "diagram": "d-journey", "sourceIds": ["s-api", "s-api-dec"], "checks": ["chk-review"],
+          "teachBack": "Describe everything between the adjuster clicking approve and the farmer being notified."
+        }
+      ]
+    },
+    {
+      "id": "m-platform", "title": "Platform: auth and data", "summary": "Security and where things live.", "icon": "ShieldCheck",
+      "milestone": "You can reason about the security posture end to end.",
+      "lessons": [
+        {
+          "id": "l-authz", "type": "code-walkthrough", "title": "Passwords, sessions, and RBAC", "est": 13, "conceptIds": ["c-authz"], "techIds": ["t-argon2"],
+          "summary": "Argon2id password hashing with transparent legacy upgrades, opaque server-side sessions, and a five-role hierarchy enforced across the API.",
+          "sections": {
+            "what": "auth/passwords hashes with Argon2id and still verifies legacy PBKDF2; auth/routes issues opaque server-side sessions; roles run owner > admin > moderator > reviewer > farmer.",
+            "why": "Credentials and authorization are the app's trust core; getting hashing and role checks right is non-negotiable.",
+            "how": "verify_password accepts both schemes; needs_rehash upgrades legacy hashes to Argon2id on next login. api_admin.set_role changes roles and every privileged action appends to the audit log.",
+            "connects": "require_auth gates the console API; api_admin, api_magic_link, and api_keys_routes build on the same session/role model.",
+            "ifChanged": "Skip needs_rehash and old PBKDF2 hashes never get upgraded, weakening accounts created before the Argon2id switch."
+          },
+          "walkthrough": [
+            { "src": "s-passwords", "code": "_ph = PasswordHasher(time_cost=3, memory_cost=64*1024, parallelism=4, hash_len=32, salt_len=16)\n\ndef verify_password(plain, encoded) -> bool:\n    if encoded.startswith(\"$argon2\"): return _ph.verify(encoded, plain)\n    if encoded.startswith(\"pbkdf2-sha256$\"): return _verify_pbkdf2(plain, encoded)\n    return False\n\ndef needs_rehash(encoded) -> bool:\n    return not encoded.startswith(\"$argon2\") or _ph.check_needs_rehash(encoded)", "note": "OWASP 2023 Argon2id params; legacy PBKDF2 verified then upgraded.", "highlight": [8] }
+          ],
+          "diagram": "d-auth", "sourceIds": ["s-passwords", "s-authroutes", "s-admin"], "checks": ["chk-authz"],
+          "teachBack": "Explain what happens to a legacy PBKDF2 password on a successful login."
+        },
+        {
+          "id": "l-data", "type": "concept", "title": "Storage, models, and the audit log", "est": 11, "conceptIds": ["c-data"], "techIds": ["t-vector", "t-oss", "t-fc"],
+          "summary": "Three stores chosen by data shape, typed models, and an append-only audit trail for every privileged action.",
+          "sections": {
+            "what": "SQLModel over DATABASE_URL holds claims/farmers/users/sessions; OSS holds photos and PDFs; DashVector holds embeddings. Models live in app/models; storage/ wraps CRUD.",
+            "why": "Records, blobs, and semantic search have different access patterns, so each gets the right store.",
+            "how": "claims_repo.save persists the Claim and triggers index_claim into the vector store; audit_log appends who did what; on Function Compute the SQLite file is in ephemeral /tmp, hence the startup demo seed.",
+            "connects": "The models (Claim, ClaimStatus, Farmer) are the shared shapes every layer speaks.",
+            "ifChanged": "Keep SQLite in production and data vanishes on instance recycle; DATABASE_URL points at Postgres for durability."
+          },
+          "diagram": "d-data", "sourceIds": ["s-models", "s-claimsrepo", "s-audit", "s-config", "s-main-seed"], "checks": ["chk-data"],
+          "teachBack": "For one claim, name the three stores its data spreads across and what each holds."
+        }
+      ]
+    },
+    {
+      "id": "m-operate", "title": "Operate and extend", "summary": "Run it, swap providers, ship it.", "icon": "Wrench",
+      "milestone": "You could add a feature or swap a provider safely.",
+      "lessons": [
+        {
+          "id": "l-extend", "type": "customization", "title": "Swapping providers with config", "est": 12, "conceptIds": ["c-extend"],
+          "summary": "Identity, payments, and the vector store are each an interface with multiple implementations chosen by settings, so swapping is configuration, not code.",
+          "sections": {
+            "what": "identity_verification defines an IdentityProvider Protocol with MockProvider/PersonaProvider (Veriff, Onfido ready); payments abstracts a merchant of record over Paddle/LemonSqueezy/Razorpay; vector_store swaps via get_store.",
+            "why": "The demo runs on free/mock providers while the seams to real vendors stay in the codebase for judges and future work.",
+            "how": "config.Settings reads env (models, vector_store, DATABASE_URL, provider keys, PAYMENTS_PROVIDER=none by default); each subsystem picks its implementation from those settings.",
+            "connects": "GDPR (export_my_data, delete_my_account) and notifications (multi-channel dispatcher) follow the same abstraction style.",
+            "ifChanged": "Point INSURER_BASE_URL at a real carrier and set a payments provider and the mocks become production integrations with no agent changes."
+          },
+          "sourceIds": ["s-idv", "s-payments", "s-config", "s-gdpr"], "checks": ["chk-extend"],
+          "teachBack": "Describe how you would switch the identity provider from Mock to Persona."
+        },
+        {
+          "id": "l-deploy", "type": "concept", "title": "Running, testing, and deploying", "est": 10, "conceptIds": ["c-deploy"], "techIds": ["t-fc"],
+          "summary": "uv to install, pytest to verify, Docker + Function Compute to run, Vercel for the console, CI dual-pushing the image, with real cold-start quirks.",
+          "sections": {
+            "what": "Local: uv sync, fill .env, run uvicorn, run pytest (the suite includes test_claims_pipeline). Deploy: build the image, run on Function Compute (scale-to-zero); the console is on Vercel.",
+            "why": "Serverless scale-to-zero fits bursty, cheap, demo-friendly hosting.",
+            "how": "The Dockerfile CMD execs uvicorn directly from the venv (using 'uv run' would re-sync at startup); CI lints/tests, typechecks the web build, and dual-pushes to ghcr.io and Alibaba ACR; FC pulls from ghcr.io.",
+            "connects": "The startup seed exists because FC's SQLite is ephemeral; tests double as executable documentation of the pipeline.",
+            "ifChanged": "Use 'uv run' in the CMD and every cold start re-resolves metadata, slowing responses."
+          },
+          "sourceIds": ["s-docker", "s-tests"], "checks": ["chk-deploy"],
+          "teachBack": "Explain how a commit to main becomes a running container on Function Compute."
+        },
+        {
+          "id": "l-tradeoffs", "type": "comparison", "title": "Tradeoffs and the pitch", "est": 9, "conceptIds": ["c-tradeoffs"],
+          "summary": "Every demo shortcut is deliberate and has a named production fix; leading with them builds trust.",
+          "sections": {
+            "what": "An honest map of what is real (a full SaaS surface + human checkpoint) versus scoped for the demo.",
             "why": "Confident, truthful framing wins judges and survives hard questions.",
-            "how": "Lead with the real SaaS surface and the human checkpoint; name each limit with its fix.",
-            "connects": "The fixes are concrete config switches (DATABASE_URL, INSURER_BASE_URL).",
+            "how": "Name each limit with its concrete fix, most of them config switches.",
+            "connects": "The fixes map to real settings: DATABASE_URL, INSURER_BASE_URL, PAYMENTS_PROVIDER, an approved WhatsApp number.",
             "ifChanged": "Hide the limits and one pointed question can unravel the pitch."
           },
           "compare": {
             "a": "Today (demo)", "b": "Production path",
             "rows": [
-              { "aspect": "Location", "a": "Default GPS constant", "b": "Opt-in location share; pipeline already takes lat/lon" },
-              { "aspect": "Database", "a": "Ephemeral SQLite", "b": "Postgres via DATABASE_URL" },
-              { "aspect": "Insurer", "a": "Mock insurer", "b": "Real carrier via INSURER_BASE_URL" },
-              { "aspect": "Channel", "a": "Telegram (trial-tier limits)", "b": "Approved WhatsApp Business number" }
+              { "aspect": "Location", "a": "Default GPS constant", "b": "Opt-in location share (Telegram flow already scaffolds it)" },
+              { "aspect": "Database", "a": "Ephemeral SQLite on /tmp", "b": "Postgres via DATABASE_URL" },
+              { "aspect": "Insurer", "a": "Mock insurer at /insurer", "b": "Real carrier via INSURER_BASE_URL" },
+              { "aspect": "Rate limiting", "a": "In-process per-IP limiter", "b": "CDN/WAF distributed limiting" },
+              { "aspect": "Payments/identity", "a": "Mock providers", "b": "Paddle/LemonSqueezy/Razorpay, Persona/Veriff/Onfido" }
             ]
           },
-          "sourceIds": ["s-gps"], "checks": ["chk-gps"],
-          "teachBack": "Give your 60-second judge pitch: what it is, the problem, the demo path, the human checkpoint, one honest limit + fix."
+          "sourceIds": ["s-intake-loc", "s-main-seed", "s-config"], "checks": [],
+          "teachBack": "Give a 60-second pitch: what it is, the problem, the live path, the human checkpoint, one honest limit and its fix."
         },
         {
-          "id": "l-mastery", "type": "teach-back", "title": "Teach it back", "est": 6, "conceptIds": ["c-story", "c-arch", "c-journey", "c-agents", "c-tradeoffs"],
-          "summary": "Prove you can explain ClaimFarm end to end, naming real files.",
+          "id": "l-mastery", "type": "teach-back", "title": "Teach it back", "est": 8, "conceptIds": ["c-story", "c-channels", "c-intake", "c-review", "c-authz", "c-tradeoffs"],
+          "summary": "Prove you can walk the whole system, naming real files and functions.",
           "sections": {
-            "what": "A self-assessment: can you teach the whole system?",
-            "why": "Explaining it confidently was the goal of this course.",
-            "how": "Narrate the journey, cite real files, own the tradeoffs.",
-            "connects": "Every prior landmark on the atlas.",
-            "ifChanged": "If a step feels fuzzy, revisit that landmark; the dashboard shows what needs review."
+            "what": "A self-assessment across every subsystem you just learned.",
+            "why": "Contributing means you can navigate the real code, not just the pitch.",
+            "how": "Narrate a verified webhook, process_inbound, the agents, get_claim/post_decision, and the auth/data platform, citing files.",
+            "connects": "Every prior lesson.",
+            "ifChanged": "If any subsystem is fuzzy, revisit that lesson; the dashboard shows which concepts need review."
           },
-          "diagram": "d-journey",
-          "teachBack": "Write your 3-minute ClaimFarm walkthrough, citing at least three real files, ending with one honest limit and its fix."
+          "diagram": "d-pipeline", "sourceIds": ["s-main", "s-intake", "s-api-dec"],
+          "teachBack": "Write a 4-minute contributor walkthrough citing at least six real files, ending with one limitation and its fix."
         }
       ]
     }

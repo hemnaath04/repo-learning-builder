@@ -3,12 +3,12 @@
     {
       "id": "claimfarm",
       "title": "Understanding ClaimFarm",
-      "subtitle": "From a farmer's photo to a filed crop-insurance claim",
+      "subtitle": "A deep, code-grounded tour of the whole codebase",
       "category": "ai-ml",
-      "estimatedMinutes": 70,
-      "modules": 5,
-      "lessons": 9,
-      "updatedAt": "2026-07-01T00:00:00.000Z"
+      "estimatedMinutes": 165,
+      "modules": 7,
+      "lessons": 17,
+      "updatedAt": "2026-07-01T05:45:18.131Z"
     },
     {
       "id": "dns",

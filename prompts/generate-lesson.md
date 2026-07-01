@@ -10,6 +10,10 @@ RULES
 - Cite source ids you were given (do not invent ids).
 - Stay within the word budget for this depth (quick 250-400, standard 400-650, deep 600-900).
 - Fill the five sections. Keep each section 1-3 short sentences.
+- For deep courses, ground the lesson in the real code you were given: name real
+  functions, classes, and files; when the archetype is code-walkthrough, include
+  short real snippets with the exact source ids. Never teach only what the README
+  says; teach how the code actually works.
 
 INPUTS (provided): lesson scaffold (id, type, title), learner level, relevant source excerpts, allowed registry ids (concepts, sources, technologies), allowed check ids (may be empty).
 

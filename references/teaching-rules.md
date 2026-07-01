@@ -35,6 +35,15 @@ understanding. Analogies must map accurately to the real behavior.
 | Standard | 6-12 | 400-650 | 2 |
 | Deep | 12-20 | 600-900 | 2-3 |
 
+## Depth is real coverage, not longer basics
+
+A deep course teaches the actual system: one lesson per real subsystem or
+technology found by reading the whole codebase (see `source-analysis.md`), each
+grounded in real code (functions, classes, files) with a `code-walkthrough`
+carrying real snippets and exact source ids. Never ship a "deep" course that only
+restates the README or covers a handful of surface concepts. If a contributor
+would need to understand it to change the code, it deserves a lesson.
+
 ## Adapting
 
 Learner level sets the writing depth of the generated content. Goal shifts
