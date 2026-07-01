@@ -1,0 +1,12 @@
+# Node / build artifacts (the template is installed, then built by the user)
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+
+# OS / editor
+.DS_Store
+*.local
+.idea/
+.vscode/
