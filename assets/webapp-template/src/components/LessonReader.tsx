@@ -76,7 +76,7 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
   if (recap.length) sections.push({ id: 'recap', label: 'Recap' });
 
   return (
-    <div className={reading ? 'reading-mode' : ''}>
+    <div className={`reader-page${reading ? ' reading-mode' : ''}`}>
       <div className="reader-top">
         <div className="bar"><span style={{ width: `${scroll}%` }} /></div>
         <div className="meta">
