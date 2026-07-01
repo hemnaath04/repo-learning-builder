@@ -6,9 +6,9 @@
     {
       "name": "repo-learning-builder",
       "source": "./",
-      "description": "Turn any repo, GitHub URL, topic, or documents into a polished interactive learning web app.",
+      "description": "Turn a repo, GitHub URL, topic, or a single file into an interactive Atlas learning app. One app, many courses; generation writes only compact course JSON.",
       "category": "learning",
-      "tags": ["learning", "education", "interactive-course", "onboarding"]
+      "tags": ["learning", "education", "interactive-course", "atlas", "onboarding"]
     }
   ]
 }

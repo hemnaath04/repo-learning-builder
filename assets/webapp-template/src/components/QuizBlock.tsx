@@ -8,7 +8,7 @@ const PRAISE = ['Nice, first try.', 'Correct.', 'Exactly right.', 'You have got 
 
 export function QuizBlock({ quiz }: { quiz: QuizItem }) {
   const { progress, actions } = useApp();
-  const attempts = progress.quizAttempts[quiz.id] ?? [];
+  const attempts = progress?.quizAttempts[quiz.id] ?? [];
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [showHint, setShowHint] = useState(false);

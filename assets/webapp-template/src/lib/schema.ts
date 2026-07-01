@@ -1,58 +1,53 @@
-// Course schema v2 (compact). Two shapes live here:
-//  - Compact*  : what course generation produces (small, id-referenced).
-//  - runtime   : what components consume (expanded by expand.ts).
-// See references/curriculum-schema.md. Keep in sync with scripts/validate-course.mjs.
+// Course schema v3 (compact, registry-based). Two shapes:
+//  - Compact* : what generation produces (small, id-referenced, no repeated labels).
+//  - runtime  : what components consume (expanded by expand.ts).
+// The renderer supplies every fixed label (the five questions, Example, Analogy,
+// Knowledge check, Try it yourself, Go deeper). Generated data carries only values.
 
-import type { Archetype, LessonKind } from './archetypes';
-import type { Motif, ThemeName } from './theme';
+import type { Archetype } from './archetypes';
 
 export type ExplanationLevel = 'eli10' | 'beginner' | 'intermediate' | 'advanced';
-export type FacetKey = 'what' | 'why' | 'how' | 'whatif';
-export type CalloutKind = 'example' | 'analogy' | 'insight' | 'warning' | 'experiment';
-export type Locking = 'recommended' | 'strict';
+export type SectionKey = 'what' | 'why' | 'how' | 'connects' | 'ifChanged';
+export type CalloutKind = 'example' | 'analogy' | 'insight' | 'warning';
 
 // ---------------------------------------------------------------------------
 // Runtime types (post-expansion)
 // ---------------------------------------------------------------------------
-
 export interface SourceRef { id?: string; path: string; lines?: string; note?: string }
 export interface Tech { id: string; name: string; purpose?: string; location?: string; alternatives?: string; tradeoffs?: string }
-export interface Concept { id: string; name: string; summary?: string; moduleId?: string }
+export interface Concept { id: string; name: string; summary?: string }
 export interface GlossaryEntry { term: string; definition: string; seeAlso?: string[] }
-export interface Diagram { id: string; title: string; type: 'mermaid'; code: string; nodes?: Record<string, string> }
+export interface Diagram { id: string; title: string; code: string }
 export interface RepoNode { name: string; kind: 'dir' | 'file'; path: string; role?: string; importance?: number; children?: RepoNode[] }
-export interface Facet { key: FacetKey; label: string; body: string }
+export interface Facet { key: SectionKey; label: string; body: string }
 export interface Callout { kind: CalloutKind; body: string }
 export interface FlowStep { actor: string; action: string; note?: string }
 export interface CompareRow { aspect: string; a: string; b: string }
 export interface CompareTable { a: string; b: string; rows: CompareRow[] }
 export interface WalkthroughStep { path?: string; lines?: string; code: string; note?: string; highlight?: number[] }
 export interface QuizItem { id: string; question: string; options: string[]; answerIndex: number; hint?: string; explanation: string }
-export interface Exercise { id: string; prompt: string; checklist?: string[] }
 
 export interface Lesson {
   id: string;
   title: string;
-  order: number;
-  archetype: Archetype;
-  kind: LessonKind;
-  icon: string;
+  summary?: string;
+  type: Archetype;
   typeLabel: string;
+  icon: string;
   est?: number;
+  difficulty?: number; // 1-3
   concepts: string[];
-  explanations: Partial<Record<ExplanationLevel, string>>;
   facets?: Facet[];
+  callouts?: Callout[];
   diagram?: Diagram;
   flow?: FlowStep[];
   walkthrough?: WalkthroughStep[];
-  tech?: Tech[];
   compare?: CompareTable;
-  callouts?: Callout[];
+  tech?: Tech[];
   sources?: SourceRef[];
   quiz?: QuizItem[];
-  exercise?: Exercise;
+  activity?: string;
   teachBack?: string;
-  recap?: string[];
   deeper?: string;
   moduleId?: string;
 }
@@ -61,20 +56,15 @@ export interface Module {
   id: string;
   title: string;
   summary?: string;
-  order: number;
   icon?: string;
-  milestone?: string;
   lessons: Lesson[];
 }
-
-export interface ThemeConfig { name: ThemeName; accent?: string; motif?: Motif; icon?: string }
-export interface CourseSettings { locking: Locking }
 
 export interface CourseMeta {
   id: string;
   title: string;
   subtitle?: string;
-  sourceType: 'repository' | 'github-url' | 'topic' | 'session' | 'documents' | 'lesson';
+  sourceType: 'repository' | 'github-url' | 'topic' | 'lesson' | 'documents' | 'session';
   sourceRef?: string;
   sourceFingerprint?: string;
   generatedAt: string;
@@ -86,61 +76,68 @@ export interface CourseMeta {
   estimatedMinutes?: number;
   promise?: string;
   outcomes?: string[];
-  defaultLevel: ExplanationLevel;
   levels: ExplanationLevel[];
+  defaultLevel: ExplanationLevel;
 }
 
 export interface Course {
-  schemaVersion: 2;
+  schemaVersion: 3;
   meta: CourseMeta;
-  theme: ThemeConfig;
-  settings: CourseSettings;
   concepts: Concept[];
+  technologies: Tech[];
   glossary: GlossaryEntry[];
-  tech: Tech[];
   diagrams: Diagram[];
   repoMap?: RepoNode | null;
   modules: Module[];
 }
 
-// ---------------------------------------------------------------------------
-// Compact types (pre-expansion, authored by generation)
-// ---------------------------------------------------------------------------
-
-export interface Registries {
-  concepts?: Record<string, { name: string; summary?: string; moduleId?: string }>;
-  sources?: Record<string, { path: string; lines?: string; note?: string }>;
-  tech?: Record<string, Omit<Tech, 'id'>>;
-  glossary?: Record<string, GlossaryEntry>;
-  diagrams?: Record<string, { title: string; type?: 'mermaid'; code: string; nodes?: Record<string, string> }>;
+// Registry entry in the course registry (public/courses/index.json).
+export interface CourseSummary {
+  id: string;
+  title: string;
+  subtitle?: string;
+  category?: string;
+  estimatedMinutes?: number;
+  modules?: number;
+  lessons?: number;
+  updatedAt?: string;
 }
+export interface CourseRegistry { courses: CourseSummary[] }
 
-export interface CompactQuiz { id: string; q: string; options: string[]; answer: number; hint?: string; why: string }
+// ---------------------------------------------------------------------------
+// Compact types (pre-expansion)
+// ---------------------------------------------------------------------------
+export interface Registries {
+  concepts?: Record<string, { name: string; summary?: string }>;
+  technologies?: Record<string, Omit<Tech, 'id'>>;
+  sources?: Record<string, { path: string; lines?: string; note?: string }>;
+  glossary?: Record<string, GlossaryEntry>;
+  landmarks?: Record<string, { title: string; icon?: string }>;
+}
+export interface CompactCheck { q: string; options: string[]; answer: number; hint?: string; why: string }
 
 export interface CompactLesson {
   id: string;
+  type: Archetype;
   title: string;
-  order?: number;
-  archetype: Archetype;
+  summary?: string;
   est?: number;
-  concepts?: string[];
-  levels?: Partial<Record<ExplanationLevel, string>>;
-  facets?: Partial<Record<FacetKey, string>>;
+  difficulty?: number;
+  conceptIds?: string[];
+  sourceIds?: string[];
+  techIds?: string[];
+  sections?: Partial<Record<SectionKey, string>>;
   example?: string;
   analogy?: string;
   insight?: string;
   warning?: string;
-  experiment?: string;
-  sources?: string[];
+  checks?: string[]; // ids into top-level checks registry
+  activity?: string;
   diagram?: string;
-  flow?: FlowStep[];
   walkthrough?: { src?: string; code: string; note?: string; highlight?: number[] }[];
-  tech?: string[];
+  flow?: FlowStep[];
   compare?: CompareTable;
-  quiz?: CompactQuiz[];
-  exercise?: Exercise;
   teachBack?: string;
-  recap?: string[];
   deeper?: string;
 }
 
@@ -148,111 +145,94 @@ export interface CompactModule {
   id: string;
   title: string;
   summary?: string;
-  order?: number;
   icon?: string;
-  milestone?: string;
+  landmarkId?: string;
   lessons: CompactLesson[];
 }
 
 export interface CompactCourse {
-  schemaVersion: 2;
-  meta: Omit<CourseMeta, 'defaultLevel'> & { defaultLevel?: ExplanationLevel };
-  theme?: Partial<ThemeConfig>;
-  settings?: Partial<CourseSettings>;
+  schemaVersion: 3;
+  meta: Omit<CourseMeta, 'defaultLevel' | 'levels'> & { defaultLevel?: ExplanationLevel; levels?: ExplanationLevel[] };
   registries?: Registries;
+  checks?: Record<string, CompactCheck>;
+  diagrams?: Record<string, { title: string; code: string }>;
   repoMap?: RepoNode | null;
   modules: CompactModule[];
 }
 
 // ---------------------------------------------------------------------------
-// Validation (compact v2)
+// Validation (compact v3). Used by scripts/validate-lesson.mjs mirror + tests.
 // ---------------------------------------------------------------------------
-
 export interface ValidationResult { ok: boolean; errors: string[]; warnings: string[] }
 
-const ARCHETYPE_SET = new Set<Archetype>([
-  'concept', 'story', 'architecture', 'code-walkthrough', 'request-flow',
-  'technology', 'exercise', 'debugging', 'comparison', 'final-project', 'teach-back',
-]);
+export const ARCHETYPES = [
+  'overview', 'story', 'concept', 'technology', 'architecture', 'request-flow',
+  'code-walkthrough', 'comparison', 'debugging', 'exercise', 'customization',
+  'final-project', 'teach-back',
+] as const;
+const ARCHETYPE_SET = new Set<string>(ARCHETYPES as readonly string[]);
 
 export function validateCourse(course: unknown): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const seen = new Map<string, string>();
-
-  const requireId = (id: unknown, kind: string, where: string): void => {
+  const requireId = (id: unknown, kind: string, where: string) => {
     if (id == null || id === '') { errors.push(`${where}: missing id`); return; }
-    const key = String(id);
-    if (seen.has(key)) errors.push(`duplicate id "${key}" (${kind} and ${seen.get(key)})`);
-    else seen.set(key, kind);
+    const k = String(id);
+    if (seen.has(k)) errors.push(`duplicate id "${k}" (${kind} and ${seen.get(k)})`);
+    else seen.set(k, kind);
   };
 
   if (!course || typeof course !== 'object') return { ok: false, errors: ['course is not an object'], warnings };
   const c = course as Record<string, any>;
-
-  if (c.schemaVersion !== 2) errors.push('schemaVersion must be 2');
+  if (c.schemaVersion !== 3) errors.push('schemaVersion must be 3');
 
   const meta = c.meta;
-  if (!meta || typeof meta !== 'object') {
-    errors.push('meta is required');
-  } else {
-    for (const k of ['id', 'title', 'sourceType', 'generatedAt']) if (!meta[k]) errors.push(`meta.${k} is required`);
-    if (!Array.isArray(meta.levels) || meta.levels.length === 0) errors.push('meta.levels must be a non-empty array');
-    else if (meta.defaultLevel && !meta.levels.includes(meta.defaultLevel)) errors.push(`meta.defaultLevel "${meta.defaultLevel}" not in levels`);
-  }
-  const defaultLevel = meta?.defaultLevel || meta?.levels?.[0];
+  if (!meta || typeof meta !== 'object') errors.push('meta is required');
+  else for (const k of ['id', 'title', 'sourceType', 'generatedAt']) if (!meta[k]) errors.push(`meta.${k} is required`);
 
   const reg = c.registries ?? {};
-  const sourceIds = new Set(Object.keys(reg.sources ?? {}));
-  const techIds = new Set(Object.keys(reg.tech ?? {}));
   const conceptIds = new Set(Object.keys(reg.concepts ?? {}));
-  const diagramIds = new Set(Object.keys(reg.diagrams ?? {}));
-  for (const id of [...sourceIds, ...techIds, ...conceptIds, ...diagramIds]) requireId(id, 'registry', `registries.${id}`);
+  const sourceIds = new Set(Object.keys(reg.sources ?? {}));
+  const techIds = new Set(Object.keys(reg.technologies ?? {}));
+  const checkIds = new Set(Object.keys(c.checks ?? {}));
+  const diagramIds = new Set(Object.keys(c.diagrams ?? {}));
 
   if (!Array.isArray(c.modules) || c.modules.length === 0) {
     errors.push('modules must be a non-empty array');
   } else {
-    c.modules.forEach((mod: any, mi: number) => {
+    c.modules.forEach((m: any, mi: number) => {
       const mw = `modules[${mi}]`;
-      requireId(mod?.id, 'module', mw);
-      if (!mod?.title) errors.push(`${mw}: missing title`);
-      if (!Array.isArray(mod?.lessons) || mod.lessons.length === 0) { errors.push(`${mw}: lessons must be a non-empty array`); return; }
-      mod.lessons.forEach((lesson: any, li: number) => {
+      requireId(m?.id, 'module', mw);
+      if (!m?.title) errors.push(`${mw}: missing title`);
+      if (!Array.isArray(m?.lessons) || m.lessons.length === 0) { errors.push(`${mw}: lessons must be non-empty`); return; }
+      m.lessons.forEach((l: any, li: number) => {
         const lw = `${mw}.lessons[${li}]`;
-        requireId(lesson?.id, 'lesson', lw);
-        if (!lesson?.title) errors.push(`${lw}: missing title`);
-        if (!lesson?.archetype || !ARCHETYPE_SET.has(lesson.archetype)) errors.push(`${lw}: invalid or missing archetype "${lesson?.archetype}"`);
-        const hasText = lesson?.levels && Object.keys(lesson.levels).length > 0;
-        const hasFacets = lesson?.facets && Object.keys(lesson.facets).length > 0;
-        if (!hasText && !hasFacets && !lesson?.walkthrough && !lesson?.flow && !lesson?.compare) {
-          warnings.push(`${lw}: has no explanation text, facets, walkthrough, flow, or comparison`);
-        }
-        if (hasText && defaultLevel && !lesson.levels[defaultLevel]) {
-          warnings.push(`${lw}: levels present but missing default level "${defaultLevel}"`);
-        }
-        for (const sid of lesson?.sources ?? []) if (!sourceIds.has(sid)) warnings.push(`${lw}: source "${sid}" not in registries.sources`);
-        for (const tid of lesson?.tech ?? []) if (!techIds.has(tid)) warnings.push(`${lw}: tech "${tid}" not in registries.tech`);
-        for (const cid of lesson?.concepts ?? []) if (!conceptIds.has(cid)) warnings.push(`${lw}: concept "${cid}" not in registries.concepts`);
-        if (lesson?.diagram && !diagramIds.has(lesson.diagram)) warnings.push(`${lw}: diagram "${lesson.diagram}" not in registries.diagrams`);
-        if (lesson?.quiz != null) {
-          if (!Array.isArray(lesson.quiz)) errors.push(`${lw}.quiz must be an array`);
-          else lesson.quiz.forEach((q: any, qi: number) => {
-            const qw = `${lw}.quiz[${qi}]`;
-            requireId(q?.id, 'quiz', qw);
-            if (!q?.q) errors.push(`${qw}: missing question text (q)`);
-            if (!Array.isArray(q?.options) || q.options.length < 2) errors.push(`${qw}: options must have at least 2 entries`);
-            else if (typeof q.answer !== 'number' || q.answer < 0 || q.answer >= q.options.length) errors.push(`${qw}: answer out of range`);
-            if (!q?.why) warnings.push(`${qw}: missing explanation (why)`);
-          });
-        }
+        requireId(l?.id, 'lesson', lw);
+        if (!l?.title) errors.push(`${lw}: missing title`);
+        if (!l?.type || !ARCHETYPE_SET.has(l.type)) errors.push(`${lw}: invalid archetype "${l?.type}"`);
+        const hasBody = (l?.sections && Object.keys(l.sections).length) || l?.summary || l?.walkthrough || l?.flow || l?.compare;
+        if (!hasBody) warnings.push(`${lw}: no sections, summary, walkthrough, flow, or comparison`);
+        for (const id of l?.conceptIds ?? []) if (!conceptIds.has(id)) warnings.push(`${lw}: concept "${id}" not in registries.concepts`);
+        for (const id of l?.sourceIds ?? []) if (!sourceIds.has(id)) warnings.push(`${lw}: source "${id}" not in registries.sources`);
+        for (const id of l?.techIds ?? []) if (!techIds.has(id)) warnings.push(`${lw}: tech "${id}" not in registries.technologies`);
+        for (const id of l?.checks ?? []) if (!checkIds.has(id)) warnings.push(`${lw}: check "${id}" not in checks`);
+        if (l?.diagram && !diagramIds.has(l.diagram)) warnings.push(`${lw}: diagram "${l.diagram}" not in diagrams`);
       });
     });
+  }
+
+  for (const [id, ch] of Object.entries<any>(c.checks ?? {})) {
+    const w = `checks.${id}`;
+    if (!ch?.q) errors.push(`${w}: missing question (q)`);
+    if (!Array.isArray(ch?.options) || ch.options.length < 2) errors.push(`${w}: options must have >= 2 entries`);
+    else if (typeof ch.answer !== 'number' || ch.answer < 0 || ch.answer >= ch.options.length) errors.push(`${w}: answer out of range`);
+    if (!ch?.why) warnings.push(`${w}: missing explanation (why)`);
   }
 
   return { ok: errors.length === 0, errors, warnings };
 }
 
-/** Flatten runtime lessons in display order, annotated with their module id. */
 export function orderedLessons(course: Course): Array<Lesson & { moduleId: string }> {
   return course.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleId: m.id })));
 }

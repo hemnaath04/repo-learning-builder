@@ -1,178 +1,48 @@
-// Lesson archetypes. This is the core token-saving mechanism: every repeated
-// label, heading, facet name, lesson "kind", icon, and default section order
-// lives here in the permanent template. Generated course data only carries
-// source-specific content, never these structural strings.
+// Lesson archetypes for the Atlas renderer. All fixed labels live here so
+// generated course data never repeats headings or UI copy.
 
 export type Archetype =
-  | 'concept'
-  | 'story'
-  | 'architecture'
-  | 'code-walkthrough'
-  | 'request-flow'
-  | 'technology'
-  | 'exercise'
-  | 'debugging'
-  | 'comparison'
-  | 'final-project'
-  | 'teach-back';
+  | 'overview' | 'story' | 'concept' | 'technology' | 'architecture'
+  | 'request-flow' | 'code-walkthrough' | 'comparison' | 'debugging'
+  | 'exercise' | 'customization' | 'final-project' | 'teach-back';
 
-// The visual family a lesson belongs to. Drives the badge color and icon so
-// quick reads, deep dives, challenges, and projects look distinct.
-export type LessonKind = 'quick' | 'deep' | 'challenge' | 'project';
+export type Accent = 'ultramarine' | 'coral' | 'mint' | 'ink';
 
-export interface FacetLabels {
-  what: string;
-  why: string;
-  how: string;
-  whatif: string;
-}
-
-export interface ArchetypeSpec {
-  label: string;
-  kind: LessonKind;
-  icon: string; // lucide icon name
-  tagline: string;
-  facetLabels: FacetLabels;
-}
-
-const DEFAULT_FACETS: FacetLabels = {
-  what: 'What is it?',
-  why: 'Why does it exist?',
-  how: 'How does it work?',
-  whatif: 'What if it changed?',
-};
+export interface ArchetypeSpec { label: string; icon: string; accent: Accent }
 
 export const ARCHETYPES: Record<Archetype, ArchetypeSpec> = {
-  concept: {
-    label: 'Concept',
-    kind: 'quick',
-    icon: 'Lightbulb',
-    tagline: 'A single idea, made clear.',
-    facetLabels: DEFAULT_FACETS,
-  },
-  story: {
-    label: 'Story',
-    kind: 'quick',
-    icon: 'BookOpen',
-    tagline: 'The narrative that frames everything.',
-    facetLabels: {
-      what: 'What is the story?',
-      why: 'Why does it matter?',
-      how: 'How does it play out?',
-      whatif: 'What if it were different?',
-    },
-  },
-  architecture: {
-    label: 'Architecture',
-    kind: 'deep',
-    icon: 'Network',
-    tagline: 'How the pieces connect.',
-    facetLabels: {
-      what: 'What are the parts?',
-      why: 'Why this shape?',
-      how: 'How do they talk?',
-      whatif: 'What if we rewired it?',
-    },
-  },
-  'code-walkthrough': {
-    label: 'Code walkthrough',
-    kind: 'deep',
-    icon: 'Code2',
-    tagline: 'Reading the real code, line by line.',
-    facetLabels: DEFAULT_FACETS,
-  },
-  'request-flow': {
-    label: 'Request flow',
-    kind: 'deep',
-    icon: 'Route',
-    tagline: 'Follow one action end to end.',
-    facetLabels: {
-      what: 'What triggers it?',
-      why: 'Why this path?',
-      how: 'How does data move?',
-      whatif: 'What if a step failed?',
-    },
-  },
-  technology: {
-    label: 'Technology',
-    kind: 'quick',
-    icon: 'Cpu',
-    tagline: 'The tool and why it was chosen.',
-    facetLabels: {
-      what: 'What is it?',
-      why: 'Why this tool?',
-      how: 'How is it used here?',
-      whatif: 'What are the alternatives?',
-    },
-  },
-  exercise: {
-    label: 'Exercise',
-    kind: 'challenge',
-    icon: 'Dumbbell',
-    tagline: 'Do it yourself.',
-    facetLabels: DEFAULT_FACETS,
-  },
-  debugging: {
-    label: 'Debugging',
-    kind: 'challenge',
-    icon: 'Bug',
-    tagline: 'Find it, understand it, fix it.',
-    facetLabels: {
-      what: 'What breaks?',
-      why: 'Why does it break?',
-      how: 'How do you fix it?',
-      whatif: 'What if it recurs?',
-    },
-  },
-  comparison: {
-    label: 'Comparison',
-    kind: 'quick',
-    icon: 'Scale',
-    tagline: 'Weigh the options.',
-    facetLabels: DEFAULT_FACETS,
-  },
-  'final-project': {
-    label: 'Project',
-    kind: 'project',
-    icon: 'Rocket',
-    tagline: 'Put it all together.',
-    facetLabels: DEFAULT_FACETS,
-  },
-  'teach-back': {
-    label: 'Teach it back',
-    kind: 'project',
-    icon: 'Mic',
-    tagline: 'Prove you can explain it.',
-    facetLabels: DEFAULT_FACETS,
-  },
+  overview: { label: 'Overview', icon: 'Compass', accent: 'ultramarine' },
+  story: { label: 'Story', icon: 'BookOpen', accent: 'coral' },
+  concept: { label: 'Concept', icon: 'Lightbulb', accent: 'ultramarine' },
+  technology: { label: 'Technology', icon: 'Cpu', accent: 'mint' },
+  architecture: { label: 'Architecture', icon: 'Network', accent: 'ink' },
+  'request-flow': { label: 'Request flow', icon: 'Route', accent: 'coral' },
+  'code-walkthrough': { label: 'Code walkthrough', icon: 'Code2', accent: 'ink' },
+  comparison: { label: 'Comparison', icon: 'Scale', accent: 'ultramarine' },
+  debugging: { label: 'Debugging', icon: 'Bug', accent: 'coral' },
+  exercise: { label: 'Exercise', icon: 'Dumbbell', accent: 'mint' },
+  customization: { label: 'Customization', icon: 'Wrench', accent: 'mint' },
+  'final-project': { label: 'Project', icon: 'Rocket', accent: 'coral' },
+  'teach-back': { label: 'Teach it back', icon: 'Mic', accent: 'ink' },
 };
 
 export function archetypeSpec(a: Archetype | undefined): ArchetypeSpec {
   return ARCHETYPES[a ?? 'concept'] ?? ARCHETYPES.concept;
 }
 
-export const LESSON_KIND_META: Record<LessonKind, { label: string; icon: string }> = {
-  quick: { label: 'Quick read', icon: 'Zap' },
-  deep: { label: 'Deep dive', icon: 'Layers' },
-  challenge: { label: 'Challenge', icon: 'Target' },
-  project: { label: 'Project', icon: 'Rocket' },
+// The five questions, labelled once by the renderer.
+export const SECTION_LABELS: Record<string, string> = {
+  what: 'What is it?',
+  why: 'Why does it exist?',
+  how: 'How does it work?',
+  connects: 'What connects to it?',
+  ifChanged: 'What happens if it changes?',
 };
+export const SECTION_ORDER = ['what', 'why', 'how', 'connects', 'ifChanged'] as const;
 
-// Canonical order the lesson renderer walks. A block only renders if the
-// expanded lesson has content for it, so archetypes never need to list sections.
-export const SECTION_ORDER = [
-  'explanation',
-  'facets',
-  'diagram',
-  'flow',
-  'walkthrough',
-  'tech',
-  'compare',
-  'callouts',
-  'sources',
-  'quiz',
-  'exercise',
-  'teachback',
-  'recap',
-  'deeper',
-] as const;
+export const CALLOUT_LABELS: Record<string, { label: string; icon: string }> = {
+  example: { label: 'Example', icon: 'Sparkles' },
+  analogy: { label: 'Analogy', icon: 'Quote' },
+  insight: { label: 'Insight', icon: 'Lightbulb' },
+  warning: { label: 'Watch out', icon: 'TriangleAlert' },
+};

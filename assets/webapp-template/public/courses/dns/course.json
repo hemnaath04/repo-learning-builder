@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 3,
+  "meta": {
+    "id": "dns",
+    "title": "How DNS Works",
+    "subtitle": "The internet's address book, from name to number",
+    "promise": "Understand how a domain name becomes a server you can reach, step by step.",
+    "sourceType": "topic",
+    "sourceRef": "Topic: DNS",
+    "sourceFingerprint": "topic:dns:v1",
+    "generatedAt": "2026-07-01T00:00:00.000Z",
+    "category": "topic",
+    "audience": "Beginner",
+    "goal": "Big-picture understanding",
+    "depth": "quick",
+    "style": "story",
+    "estimatedMinutes": 22,
+    "outcomes": ["Explain what DNS does in one sentence", "Trace a lookup from name to IP", "Explain why caching and TTL matter"],
+    "levels": ["eli10", "beginner", "intermediate", "advanced"],
+    "defaultLevel": "beginner"
+  },
+  "registries": {
+    "concepts": {
+      "c-name": { "name": "Domain names", "summary": "Human-friendly labels that stand in for numeric addresses." },
+      "c-resolver": { "name": "The resolver", "summary": "The helper that does the lookup work on your behalf." },
+      "c-hierarchy": { "name": "The hierarchy", "summary": "Root, TLD, and authoritative servers each answer part of the name." },
+      "c-cache": { "name": "Caching and TTL", "summary": "Answers are remembered for a while to make the web fast." }
+    },
+    "glossary": {
+      "g-dns": { "term": "DNS", "definition": "Domain Name System: the service that turns names like example.com into IP addresses." },
+      "g-ip": { "term": "IP address", "definition": "The numeric address of a machine on a network, like a phone number for a server." },
+      "g-resolver": { "term": "Resolver", "definition": "The DNS client (often run by your ISP) that finds the answer for you." },
+      "g-ttl": { "term": "TTL", "definition": "Time To Live: how long a DNS answer may be cached before it must be looked up again." },
+      "g-ns": { "term": "Nameserver", "definition": "A server that holds DNS records and answers questions about a domain." }
+    }
+  },
+  "checks": {
+    "chk-what": { "q": "What does DNS turn a domain name into?", "options": ["An IP address", "A password", "A web page", "An email"], "answer": 0, "hint": "Think address book.", "why": "DNS resolves a human-friendly name to the numeric IP address a computer needs to connect." },
+    "chk-cache": { "q": "Why does DNS cache answers with a TTL?", "options": ["To hide the answer", "To avoid repeating lookups and keep the web fast", "To use more memory", "It does not cache"], "answer": 1, "hint": "Speed.", "why": "Caching for the TTL avoids asking again for every visit, which makes browsing fast and reduces load." },
+    "chk-hier": { "q": "Which server gives the final authoritative answer for example.com?", "options": ["The root server", "The .com TLD server", "The domain's authoritative nameserver", "Your router"], "answer": 2, "hint": "Follow the chain to the end.", "why": "Root points to the TLD, the TLD points to the domain's authoritative nameserver, which holds the actual record." }
+  },
+  "diagrams": {
+    "d-flow": { "title": "A DNS lookup", "code": "flowchart LR\n  U[Your app] --> R[Resolver]\n  R --> ROOT[Root server]\n  ROOT --> TLD[.com server]\n  TLD --> AUTH[Authoritative NS]\n  AUTH --> R\n  R --> U" }
+  },
+  "modules": [
+    {
+      "id": "m-story", "title": "The idea", "summary": "What DNS is and why it exists.", "icon": "BookOpen",
+      "lessons": [
+        {
+          "id": "l-what", "type": "story", "title": "The internet's address book", "est": 5, "conceptIds": ["c-name"],
+          "summary": "Computers talk using numbers, but people remember names. DNS is the address book that connects the two.",
+          "sections": {
+            "what": "DNS (Domain Name System) turns a name like example.com into an IP address a computer can connect to.",
+            "why": "People remember names; machines route by numbers. DNS bridges that gap so you never memorize IP addresses.",
+            "how": "When you type a name, a lookup finds the matching number before any page loads.",
+            "connects": "Every website visit, email, and app request starts with a DNS lookup.",
+            "ifChanged": "Without DNS you would have to type a numeric address for every site, and those numbers change over time."
+          },
+          "analogy": "DNS is a phone book: you know the person's name, and it finds their number so you can call.",
+          "checks": ["chk-what"],
+          "teachBack": "Explain DNS to a friend in one sentence, without using the word 'address'."
+        }
+      ]
+    },
+    {
+      "id": "m-flow", "title": "The lookup", "summary": "How a name becomes a number.", "icon": "Route",
+      "lessons": [
+        {
+          "id": "l-resolver", "type": "concept", "title": "The resolver does the work", "est": 5, "conceptIds": ["c-resolver"],
+          "summary": "You do not search the whole internet yourself. A resolver asks the right servers for you.",
+          "sections": {
+            "what": "A resolver is the DNS client that takes your question and returns the final answer.",
+            "why": "It hides a multi-step search behind one simple request.",
+            "how": "It asks a chain of servers until it gets the IP, then hands it back to your app.",
+            "connects": "Your operating system and browser hand names to the resolver, often run by your ISP or a service like 1.1.1.1.",
+            "ifChanged": "A slow or broken resolver makes every site feel slow or unreachable, even when the sites are fine."
+          },
+          "example": "Type example.com and your resolver returns something like 93.184.216.34 for the browser to connect to.",
+          "checks": ["chk-hier"]
+        },
+        {
+          "id": "l-hierarchy", "type": "architecture", "title": "Root, TLD, authoritative", "est": 6, "conceptIds": ["c-hierarchy"],
+          "summary": "No single server knows every name. The work is split across a hierarchy that each answer part of the question.",
+          "sections": {
+            "what": "The name is resolved in steps: root server, then the TLD server (.com), then the domain's authoritative nameserver.",
+            "why": "Splitting the job lets DNS scale to billions of names without one giant database.",
+            "how": "Each level points the resolver to the next, narrowing down until the authoritative server gives the record.",
+            "connects": "The authoritative nameserver is controlled by whoever owns the domain.",
+            "ifChanged": "If a level is misconfigured, names under it stop resolving until it is fixed."
+          },
+          "analogy": "It is like finding a house: country, then city, then street, then the exact address.",
+          "diagram": "d-flow",
+          "activity": "Run `dig example.com +trace` (or an online DNS trace) and watch it walk root to authoritative."
+        }
+      ]
+    },
+    {
+      "id": "m-fast", "title": "Why it feels instant", "summary": "Caching and TTL.", "icon": "Cpu",
+      "lessons": [
+        {
+          "id": "l-cache", "type": "concept", "title": "Caching and TTL", "est": 6, "conceptIds": ["c-cache"],
+          "summary": "Looking up every name every time would be slow. DNS remembers answers for a while.",
+          "sections": {
+            "what": "Resolvers cache answers for a period called the TTL (time to live).",
+            "why": "Most lookups are repeats, so caching removes almost all of the round trips.",
+            "how": "An answer carries a TTL; until it expires the resolver reuses the cached value.",
+            "connects": "TTL is set on DNS records by the domain owner, trading freshness against speed.",
+            "ifChanged": "A very long TTL makes changes take longer to appear; a very short TTL increases lookups."
+          },
+          "warning": "When you change where a domain points, users may keep hitting the old value until the TTL expires.",
+          "checks": ["chk-cache"],
+          "teachBack": "Explain the tradeoff a short TTL versus a long TTL in your own words."
+        }
+      ]
+    }
+  ]
+}

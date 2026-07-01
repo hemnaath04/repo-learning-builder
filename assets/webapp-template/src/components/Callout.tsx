@@ -7,7 +7,6 @@ const META: Record<CalloutKind, { label: string; icon: string }> = {
   analogy: { label: 'Analogy', icon: 'Quote' },
   insight: { label: 'Insight', icon: 'Lightbulb' },
   warning: { label: 'Watch out', icon: 'TriangleAlert' },
-  experiment: { label: 'Try it', icon: 'FlaskConical' },
 };
 
 export function Callout({ data }: { data: CalloutData }) {

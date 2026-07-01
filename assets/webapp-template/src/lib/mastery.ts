@@ -65,7 +65,7 @@ export function conceptArtifacts(conceptId: string, course: Course): {
     for (const lesson of mod.lessons) {
       if (!lesson.concepts?.includes(conceptId)) continue;
       for (const q of lesson.quiz ?? []) quizIds.push(q.id);
-      if (lesson.exercise) exerciseIds.push(lesson.exercise.id);
+      if (lesson.activity) exerciseIds.push(lesson.id); // activity completion keyed by lesson id
       if (lesson.teachBack) teachBackLessonIds.push(lesson.id);
     }
   }

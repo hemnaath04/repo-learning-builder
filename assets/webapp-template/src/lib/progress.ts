@@ -21,7 +21,6 @@ export type ThemePref = 'light' | 'dark' | 'system';
 export interface Preferences {
   explanationLevel: ExplanationLevel;
   theme: ThemePref;
-  themeName: string; // 'auto' or a ThemeName; 'auto' follows the course category
   teachingStyle: string;
   reducedChrome: boolean; // reading mode preference
 }
@@ -64,8 +63,7 @@ export function createProgress(course: Course): Progress {
     sourceFingerprint: course.meta.sourceFingerprint ?? '',
     preferences: {
       explanationLevel: level,
-      theme: 'system',
-      themeName: 'auto',
+      theme: 'light', // Atlas gallery canvas is the default; dark is available in Settings
       teachingStyle: course.meta.style ?? 'balanced',
       reducedChrome: false,
     },
@@ -89,15 +87,15 @@ export function createProgress(course: Course): Progress {
 export function migrateForCourse(prev: Progress, course: Course): Progress {
   const lessonIds = new Set<string>();
   const quizIds = new Set<string>();
-  const exerciseIds = new Set<string>();
   const conceptIds = new Set((course.concepts ?? []).map((c) => c.id));
   for (const m of course.modules) {
     for (const l of m.lessons) {
       lessonIds.add(l.id);
       l.quiz?.forEach((q) => quizIds.add(q.id));
-      if (l.exercise) exerciseIds.add(l.exercise.id);
     }
   }
+  // Activity ("try it yourself") completion is keyed by lesson id.
+  const exerciseIds = lessonIds;
   const pick = <T>(obj: Record<string, T>, keep: Set<string>): Record<string, T> =>
     Object.fromEntries(Object.entries(obj).filter(([k]) => keep.has(k)));
 

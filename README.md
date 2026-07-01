@@ -1,137 +1,104 @@
 # repo-learning-builder
 
-A [Claude Code](https://claude.com/claude-code) skill that turns any codebase,
-GitHub URL, technical or non-technical topic, the current session's project, or a
-set of documents into a **polished, interactive learning web app**.
+A [Claude Code](https://claude.com/claude-code) skill that turns a **repository, GitHub URL, topic, or a single source file** into an interactive learning web app in the permanent **Atlas** design.
 
-You point it at a source, answer one short screen of questions, confirm the
-proposed outline, and it generates a complete course: progressively unlocked
-modules, quizzes with hints, mastery tracking with spaced repetition, an animated
-repository explorer, a progress dashboard, adjustable explanation levels (from
-"Explain like I'm 10" to Advanced), light/dark modes, four visual themes, search,
-a glossary, and local progress that persists in the browser.
+One reusable app hosts many courses. Each run generates only **compact course JSON**, never new UI, so courses are fast, cheap, and consistent to produce, and it works with small **Haiku-class** models by generating one lesson at a time against a strict schema.
 
-The web app is a **permanent template**. Each run generates only compact course
-data plus a small theme config, never new UI, so courses are fast, cheap, and
-consistent to produce.
+![Learning atlas](docs/home.jpg)
 
-|  |  |
+| Lesson | Mobile |
 | --- | --- |
-| ![Course home](docs/home.jpg) | ![Lesson](docs/lesson.jpg) |
+| ![Lesson](docs/lesson.jpg) | ![Mobile](docs/mobile.jpg) |
 
-## What the learner gets
+## The Atlas experience
 
-- **The five-minute story** and the problem the project solves, in plain language.
-- A **complete request/user-action journey** traced end to end.
-- The **architecture**, important files, and how they connect, each citing a real path.
-- The **technologies** used and why they were chosen, with tradeoffs.
-- How to **run, test, modify, extend, and debug** it, plus the honest limitations.
-- A **teach-it-back** assessment so they can explain it to someone else.
-
-## Design
-
-- Editorial, code-editor-influenced visual system with a monospace utility voice.
-- Four curated themes (Explorer, Laboratory, Storybook, Blueprint), each with
-  independent light and dark modes, selected from the source category or by the learner.
-- Accessible: keyboard navigation, visible focus, reduced-motion support,
-  responsive from 360px to large desktops.
+- A full-width top bar, a compact course identity strip, and a **spatial learning atlas**: landmark cards connected by an SVG path, with a contextual lesson dock.
+- Palette: gallery white `#F7F8FC`, ink `#151722`, ultramarine `#2447F9`, coral `#FF6258`, mint `#BDF3D8`, fog `#E8EAF2`. Type: Space Grotesk + Inter.
+- Responsive: desktop spatial atlas + right dock, tablet compact atlas + bottom panel, mobile vertical connected journey + bottom sheet.
+- Every lesson: the five questions (What / Why / How / What connects / What if it changes), an example, an analogy, source citations, an activity, and a knowledge check. Plus progress, mastery with spaced repetition, notes, bookmarks, search, glossary, a repository explorer, light/dark, and keyboard navigation.
 
 ## Install
 
-### Option A — marketplace (recommended)
-
-This repo is a Claude Code plugin marketplace. Add it once, then install the
-plugin. In Claude Code:
+### Option A — Claude Code plugin marketplace (recommended)
 
 ```
 /plugin marketplace add hemnaath04/repo-learning-builder
 /plugin install repo-learning-builder@hemnaath-skills
 ```
 
-Updates later:
-
-```
-/plugin marketplace update hemnaath-skills
-/plugin update repo-learning-builder
-```
-
-Installed as a plugin, the skill is invoked as `/repo-learning-builder:repo-learning-builder`.
+Update later with `/plugin marketplace update hemnaath-skills` then `/plugin update repo-learning-builder`.
+Installed as a plugin, invoke it as `/repo-learning-builder:repo-learning-builder`.
 
 ### Option B — clone into your skills folder
 
-The repo is also a standalone skill (`SKILL.md` at the root), so you can clone
-it directly:
+The repo is also a standalone skill (`SKILL.md` at the root):
 
 ```bash
 git clone https://github.com/hemnaath04/repo-learning-builder \
   ~/.claude/skills/repo-learning-builder
 ```
 
-Or scope it to a single project with `.claude/skills/repo-learning-builder`.
-Restart Claude Code (or start a new session) and invoke it as
-`/repo-learning-builder`.
+Restart Claude Code and invoke it as `/repo-learning-builder`.
 
 ## Use
 
-In Claude Code:
+```
+/repo-learning-builder https://github.com/owner/repo
+/repo-learning-builder teach me DNS
+/repo-learning-builder teach me authentication from this project
+/repo-learning-builder create a lesson about src/auth/session.ts
+```
+
+It inspects the source, asks one compact questionnaire (learner level, goal, depth, style, with a "use recommended defaults" shortcut), then generates the course and adds it to the app. It never rebuilds the application during normal use.
+
+## One app, many courses
 
 ```
-/repo-learning-builder
+learning-app/
+├── src/                     # permanent Atlas template (never edited to add a course)
+├── public/courses/
+│   ├── index.json           # generated course registry
+│   ├── claimfarm/course.json
+│   └── dns/course.json
+├── package.json             # permanent
+└── package-lock.json        # permanent
 ```
 
-Then provide a source. Examples:
-
-- **Current repo** — run it from inside a repository: `/repo-learning-builder`
-- **A GitHub URL** — `/repo-learning-builder learn https://github.com/owner/project`
-- **A topic** — `/repo-learning-builder teach me how DNS works for a beginner`
-
-It inspects the source, asks one compact set of questions (with recommended
-defaults and a "use defaults and build" fast path), shows the proposed outline
-for one confirmation, then generates the course and the web app.
-
-### Running the generated app
-
-The generated app is standard React + TypeScript + Vite:
+Adding a second course changes only files under `public/courses/`. Run the generated app with standard commands:
 
 ```bash
-cd <generated-course-app>
-npm install
+cd learning-app
+npm install      # once
 npm run dev      # http://localhost:5173
 npm run test     # unit + interaction tests
-npm run build    # static build in dist/ (deploy anywhere)
+npm run build    # static build in dist/
 ```
+
+## How it stays fast and truthful
+
+Generation is a token-efficient, deterministic-first pipeline (see `references/` and `scripts/`):
+
+1. **Fingerprint** the source (`scripts/fingerprint-source.mjs`); reuse cached analysis when it matches.
+2. **Analyze** into a compact `source-manifest.json` (`scripts/analyze-source.mjs`); never dump whole files or secrets.
+3. **Scaffold** stable course/module/lesson ids and archetypes (`scripts/create-course-scaffold.mjs`).
+4. **Generate one lesson at a time** with the Haiku-friendly prompts in `prompts/`.
+5. **Validate** each lesson and **repair field-by-field** (`scripts/validate-lesson.mjs`, `prompts/repair-json.md`).
+6. **Assemble** and **register** the course (`scripts/assemble-course.mjs`, `scripts/register-course.mjs`).
+
+Every repository claim cites a real file. Inferences are labeled. Progress migrates by stable lesson and concept ids across regenerations.
 
 ## What's in here
 
 ```
-SKILL.md                     # skill entry point and workflow
-references/                  # how it analyzes sources, teaches, and stores progress
-  source-analysis.md
-  teaching-method.md         # lesson archetypes, facets, callouts
-  curriculum-schema.md       # the compact v2 course.json schema
-  progress-model.md          # persistence, mastery, spaced repetition
-  design-system.md           # the four themes and design tokens
-  generation-workflow.md     # token-efficient generation and incremental regen
-scripts/                    # deterministic helpers (Node, no deps)
-  analyze-repository.mjs      fingerprint-source.mjs   scaffold-course.mjs
-  validate-course.mjs         validate-sources.mjs     expand-course.mjs
-  plan-regeneration.mjs
-assets/webapp-template/     # the permanent React + TS + Vite learning app
+SKILL.md                     # concise, procedural entry point
+prompts/                     # plan-course, generate-lesson, generate-quiz, generate-glossary, repair-json
+references/                  # course-schema, teaching-rules, source-analysis
+scripts/                     # analyze-source, fingerprint-source, create-course-scaffold,
+                             # validate-lesson, assemble-course, register-course, install-template
+assets/webapp-template/      # the permanent Atlas React + TS + Vite app (ships a demo course)
 ```
 
-The bundled `assets/webapp-template/` ships a demo course so you can try the app
-immediately (`cd assets/webapp-template && npm install && npm run dev`).
-
-## How it stays fast and truthful
-
-- **Generate data, not UI.** Lesson archetypes and shared registries (concepts,
-  sources, tech, glossary, diagrams) mean generated data carries only
-  source-specific content. See `references/generation-workflow.md`.
-- **Every repository claim cites a real file**, checked by
-  `scripts/validate-sources.mjs`. Inferences are labeled as inferences. Secrets
-  are never read or shown.
-- **Incremental regeneration** keyed by a source fingerprint (git SHA) preserves
-  learner progress across regenerations via stable lesson and concept ids.
+Try the app immediately: `cd assets/webapp-template && npm install && npm run dev`.
 
 ## License
 

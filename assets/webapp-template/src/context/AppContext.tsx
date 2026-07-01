@@ -1,44 +1,35 @@
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import type { Course, ExplanationLevel } from '../lib/schema';
-import { loadCourse } from '../lib/expand';
+import type { Course, CourseRegistry, ExplanationLevel } from '../lib/schema';
+import { fetchCourse, fetchRegistry } from '../lib/courses';
 import { ProgressStore, type Preferences, type Progress, type ThemePref } from '../lib/progress';
-import { THEME_NAMES, type ThemeName } from '../lib/theme';
-import rawCourse from '../data';
 
-export type Route =
-  | { name: 'home' }
-  | { name: 'overview' }
-  | { name: 'lesson'; lessonId: string }
-  | { name: 'glossary' }
-  | { name: 'explorer' }
-  | { name: 'dashboard' }
-  | { name: 'search'; q: string }
-  | { name: 'certificate' };
+export type View =
+  | 'atlas' | 'lesson' | 'explorer' | 'dashboard' | 'glossary' | 'search'
+  | 'notes' | 'settings' | 'certificate';
+export interface Route { view: View; lessonId?: string; q?: string }
+
+export type Status = 'loading' | 'ready' | 'empty' | 'error';
 
 interface AppContextValue {
-  course: Course;
-  progress: Progress;
+  status: Status;
+  error?: string;
+  registry: CourseRegistry | null;
+  courseId: string | null;
+  course: Course | null;
+  progress: Progress | null;
   route: Route;
   navigate: (route: Route) => void;
+  selectCourse: (id: string) => void;
   level: ExplanationLevel;
-  setLevel: (level: ExplanationLevel) => void;
   theme: ThemePref;
-  setTheme: (theme: ThemePref) => void;
   effectiveTheme: 'light' | 'dark';
-  themeName: ThemeName;
-  setThemeName: (name: ThemeName | 'auto') => void;
+  setTheme: (t: ThemePref) => void;
   actions: {
     completeLesson: (lessonId: string, completed?: boolean) => void;
     recordQuiz: (quizId: string, selected: number, correct: boolean) => void;
-    setExerciseDone: (exerciseId: string, done: boolean, conceptHints?: string[]) => void;
+    setExerciseDone: (lessonId: string, done: boolean, conceptHints?: string[]) => void;
     setTeachBack: (lessonId: string, text: string) => void;
     setNote: (lessonId: string, text: string) => void;
     toggleBookmark: (lessonId: string) => void;
@@ -51,33 +42,6 @@ interface AppContextValue {
 
 const Ctx = createContext<AppContextValue | null>(null);
 
-// Lightweight hash routing so screens are deep-linkable and shareable.
-function parseHash(): Route {
-  if (typeof window === 'undefined') return { name: 'home' };
-  const h = window.location.hash.replace(/^#\/?/, '');
-  const [head, ...rest] = h.split('/');
-  const tail = rest.join('/');
-  switch (head) {
-    case 'overview': return { name: 'overview' };
-    case 'dashboard': return { name: 'dashboard' };
-    case 'explorer': return { name: 'explorer' };
-    case 'glossary': return { name: 'glossary' };
-    case 'certificate': return { name: 'certificate' };
-    case 'lesson': return tail ? { name: 'lesson', lessonId: tail } : { name: 'home' };
-    case 'search': return tail ? { name: 'search', q: decodeURIComponent(tail) } : { name: 'home' };
-    default: return { name: 'home' };
-  }
-}
-
-function hashFor(route: Route): string {
-  switch (route.name) {
-    case 'home': return '#/';
-    case 'lesson': return `#/lesson/${route.lessonId}`;
-    case 'search': return `#/search/${encodeURIComponent(route.q)}`;
-    default: return `#/${route.name}`;
-  }
-}
-
 function systemTheme(): 'light' | 'dark' {
   if (typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -85,88 +49,144 @@ function systemTheme(): 'light' | 'dark' {
   return 'light';
 }
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const course = useMemo(() => loadCourse(rawCourse), []);
-  const store = useMemo(() => new ProgressStore(course), [course]);
-  const [progress, setProgress] = useState<Progress>(() => store.getState());
-  const [route, setRoute] = useState<Route>(() => parseHash());
+function parseHash(): { courseId?: string; route: Route } {
+  if (typeof window === 'undefined') return { route: { view: 'atlas' } };
+  const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [courseId, view, param] = parts;
+  const v = (view as View) || 'atlas';
+  if (v === 'lesson') return { courseId, route: { view: 'lesson', lessonId: param } };
+  if (v === 'search') return { courseId, route: { view: 'search', q: param ? decodeURIComponent(param) : '' } };
+  return { courseId, route: { view: v } };
+}
+
+function hashFor(courseId: string, route: Route): string {
+  if (route.view === 'lesson') return `#/${courseId}/lesson/${route.lessonId ?? ''}`;
+  if (route.view === 'search') return `#/${courseId}/search/${encodeURIComponent(route.q ?? '')}`;
+  return `#/${courseId}/${route.view}`;
+}
+
+export function AppProvider({
+  children, initialCourse, initialRegistry,
+}: {
+  children: ReactNode;
+  initialCourse?: Course;
+  initialRegistry?: CourseRegistry;
+}) {
+  const injected = Boolean(initialCourse);
+  const [registry, setRegistry] = useState<CourseRegistry | null>(initialRegistry ?? null);
+  const [course, setCourse] = useState<Course | null>(initialCourse ?? null);
+  const [courseId, setCourseId] = useState<string | null>(initialCourse?.meta.id ?? null);
+  const [status, setStatus] = useState<Status>(initialCourse ? 'ready' : 'loading');
+  const [error, setError] = useState<string | undefined>();
+  const [route, setRoute] = useState<Route>(() => parseHash().route);
   const [sysTheme, setSysTheme] = useState<'light' | 'dark'>(() => systemTheme());
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const storeRef = useRef<ProgressStore | null>(null);
 
-  // Keep the route in sync with the URL hash (back/forward + shareable links).
+  // Build a progress store whenever the active course changes.
   useEffect(() => {
-    const onHash = () => setRoute(parseHash());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+    if (!course) return;
+    storeRef.current = new ProgressStore(course);
+    setProgress(storeRef.current.getState());
+  }, [course]);
 
-  const theme = progress.preferences.theme;
-  const effectiveTheme = theme === 'system' ? sysTheme : theme;
-  const pref = progress.preferences.themeName;
-  const themeName: ThemeName =
-    pref && pref !== 'auto' && (THEME_NAMES as string[]).includes(pref)
-      ? (pref as ThemeName)
-      : course.theme.name;
+  // Initial load (skipped when a course is injected, e.g. in tests).
+  useEffect(() => {
+    if (injected) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const reg = initialRegistry ?? (await fetchRegistry());
+        if (cancelled) return;
+        setRegistry(reg);
+        if (reg.courses.length === 0) { setStatus('empty'); return; }
+        const wanted = parseHash().courseId;
+        const pick = reg.courses.find((c) => c.id === wanted) ?? reg.courses[0];
+        const loaded = await fetchCourse(pick.id);
+        if (cancelled) return;
+        setCourse(loaded);
+        setCourseId(pick.id);
+        setStatus('ready');
+      } catch (e) {
+        if (!cancelled) { setError((e as Error).message); setStatus('error'); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [injected, initialRegistry]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => setSysTheme(mq.matches ? 'dark' : 'light');
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    const on = () => setSysTheme(mq.matches ? 'dark' : 'light');
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
   }, []);
 
-  // Apply the resolved mode + palette + optional accent override to the document.
+  const theme = progress?.preferences.theme ?? 'system';
+  const effectiveTheme = theme === 'system' ? sysTheme : theme;
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.theme = effectiveTheme;
-    root.dataset.themeName = themeName;
-    if (course.theme.accent) {
-      root.style.setProperty('--primary', course.theme.accent);
-    } else {
-      root.style.removeProperty('--primary');
+    document.documentElement.dataset.theme = effectiveTheme;
+    document.documentElement.dataset.themeName = 'atlas';
+  }, [effectiveTheme]);
+
+  // Keep hash in sync with route + course.
+  useEffect(() => {
+    const onHash = () => {
+      const p = parseHash();
+      setRoute(p.route);
+      if (p.courseId && p.courseId !== courseId) selectCourse(p.courseId);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
+  const navigate = useCallback((next: Route) => {
+    setRoute(next);
+    if (next.view === 'lesson' && next.lessonId && storeRef.current) {
+      setProgress(storeRef.current.openLesson(next.lessonId));
     }
-  }, [effectiveTheme, themeName, course.theme.accent]);
+    if (courseId && typeof window !== 'undefined') {
+      const h = hashFor(courseId, next);
+      if (window.location.hash !== h) window.location.hash = h;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [courseId]);
 
-  const navigate = useCallback(
-    (next: Route) => {
-      if (next.name === 'lesson') setProgress(store.openLesson(next.lessonId));
-      setRoute(next);
-      if (typeof window !== 'undefined') {
-        if (window.location.hash !== hashFor(next)) window.location.hash = hashFor(next);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    },
-    [store],
-  );
+  const selectCourse = useCallback(async (id: string) => {
+    if (id === courseId) return;
+    setStatus('loading');
+    try {
+      const loaded = await fetchCourse(id);
+      setCourse(loaded);
+      setCourseId(id);
+      setRoute({ view: 'atlas' });
+      setStatus('ready');
+    } catch (e) {
+      setError((e as Error).message); setStatus('error');
+    }
+  }, [courseId]);
 
-  const actions = useMemo<AppContextValue['actions']>(
-    () => ({
-      completeLesson: (id, completed) => setProgress(store.completeLesson(id, completed)),
-      recordQuiz: (qid, sel, correct) => setProgress(store.recordQuiz(qid, sel, correct)),
-      setExerciseDone: (id, done, hints) => setProgress(store.setExerciseDone(id, done, hints)),
-      setTeachBack: (id, text) => setProgress(store.setTeachBack(id, text)),
-      setNote: (id, text) => setProgress(store.setNote(id, text)),
-      toggleBookmark: (id) => setProgress(store.toggleBookmark(id)),
-      setPreference: (key, value) => setProgress(store.setPreference(key, value)),
-      reset: () => setProgress(store.reset()),
-      importJSON: (json) => setProgress(store.importJSON(json)),
-      exportJSON: () => store.exportJSON(),
-    }),
-    [store],
-  );
+  const actions = useMemo<AppContextValue['actions']>(() => {
+    const s = () => storeRef.current!;
+    return {
+      completeLesson: (id, c) => setProgress(s().completeLesson(id, c)),
+      recordQuiz: (qid, sel, ok) => setProgress(s().recordQuiz(qid, sel, ok)),
+      setExerciseDone: (id, done, hints) => setProgress(s().setExerciseDone(id, done, hints)),
+      setTeachBack: (id, t) => setProgress(s().setTeachBack(id, t)),
+      setNote: (id, t) => setProgress(s().setNote(id, t)),
+      toggleBookmark: (id) => setProgress(s().toggleBookmark(id)),
+      setPreference: (k, v) => setProgress(s().setPreference(k, v)),
+      reset: () => setProgress(s().reset()),
+      importJSON: (json) => setProgress(s().importJSON(json)),
+      exportJSON: () => s().exportJSON(),
+    };
+  }, []);
 
   const value: AppContextValue = {
-    course,
-    progress,
-    route,
-    navigate,
-    level: progress.preferences.explanationLevel,
-    setLevel: (l) => actions.setPreference('explanationLevel', l),
-    theme,
-    setTheme: (t) => actions.setPreference('theme', t),
-    effectiveTheme,
-    themeName,
-    setThemeName: (n) => actions.setPreference('themeName', n),
+    status, error, registry, courseId, course, progress, route, navigate, selectCourse,
+    level: progress?.preferences.explanationLevel ?? 'beginner',
+    theme, effectiveTheme, setTheme: (t) => actions.setPreference('theme', t),
     actions,
   };
 

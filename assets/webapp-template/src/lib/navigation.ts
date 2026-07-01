@@ -11,15 +11,11 @@ export function moduleCompleted(course: Course, moduleId: string, progress: Prog
 }
 
 /**
- * Whether a module is open. Default locking is "recommended": nothing is hard
- * locked, so learners can preview ahead. "strict" locking (an opt-in course
- * setting) gates a module behind completing all earlier ones.
+ * Nothing is ever hard-locked (recommended-sequence model): learners can roam
+ * the atlas freely. Kept for API compatibility with callers.
  */
-export function isModuleUnlocked(course: Course, moduleId: string, progress: Progress): boolean {
-  if (course.settings.locking !== 'strict') return true;
-  const idx = course.modules.findIndex((m) => m.id === moduleId);
-  if (idx <= 0) return true;
-  return course.modules.slice(0, idx).every((m) => moduleCompleted(course, m.id, progress));
+export function isModuleUnlocked(_course: Course, _moduleId: string, _progress: Progress): boolean {
+  return true;
 }
 
 /** True when a module is ahead of the recommended sequence (preview only). */

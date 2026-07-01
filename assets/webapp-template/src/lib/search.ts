@@ -1,6 +1,6 @@
 // Tiny in-memory search across lessons and glossary terms.
 
-import type { Course, ExplanationLevel } from './schema';
+import type { Course } from './schema';
 
 export interface SearchResult {
   type: 'lesson' | 'glossary';
@@ -14,7 +14,7 @@ function textOf(strings: Array<string | undefined>): string {
   return strings.filter(Boolean).join(' ');
 }
 
-export function searchCourse(course: Course, query: string, level: ExplanationLevel): SearchResult[] {
+export function searchCourse(course: Course, query: string): SearchResult[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
   const results: SearchResult[] = [];
@@ -24,8 +24,7 @@ export function searchCourse(course: Course, query: string, level: ExplanationLe
       const haystack = textOf([
         lesson.title,
         lesson.typeLabel,
-        lesson.explanations[level],
-        lesson.explanations.beginner,
+        lesson.summary,
         ...(lesson.facets ?? []).map((f) => f.body),
         ...(lesson.callouts ?? []).map((c) => c.body),
       ]).toLowerCase();

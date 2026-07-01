@@ -1,0 +1,24 @@
+{
+  "courses": [
+    {
+      "id": "claimfarm",
+      "title": "Understanding ClaimFarm",
+      "subtitle": "From a farmer's photo to a filed crop-insurance claim",
+      "category": "ai-ml",
+      "estimatedMinutes": 70,
+      "modules": 5,
+      "lessons": 9,
+      "updatedAt": "2026-07-01T00:00:00.000Z"
+    },
+    {
+      "id": "dns",
+      "title": "How DNS Works",
+      "subtitle": "The internet's address book, from name to number",
+      "category": "topic",
+      "estimatedMinutes": 22,
+      "modules": 3,
+      "lessons": 4,
+      "updatedAt": "2026-07-01T00:00:00.000Z"
+    }
+  ]
+}

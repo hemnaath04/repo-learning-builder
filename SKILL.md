@@ -1,126 +1,101 @@
 ---
 name: repo-learning-builder
 description: >-
-  Turn any codebase, GitHub URL, technical or non-technical topic, the current
-  session's project, Claude project memory, a specific lesson, or uploaded
-  documents into a polished, premium interactive learning web app. Ships a
-  permanent React + TypeScript + Vite application template with four curated
-  visual themes (Explorer, Laboratory, Storybook, Blueprint), a lesson-archetype
-  renderer, quizzes, mastery + spaced repetition, an animated repository
-  explorer, a progress dashboard with a concept-mastery radar, notes, bookmarks,
-  search, glossary, adjustable explanation levels (Explain Like I'm 10 through
-  Advanced), light/dark modes, keyboard navigation, and local progress. Each run
-  generates only compact course data (metadata, modules, lessons, diagrams,
-  source references, a small theme config), never new UI. Use when the user
-  wants to learn, teach, onboard onto, or build a course from a repo, project,
-  topic, lesson, or documents.
+  Turn a repository, GitHub URL, topic, project, or a single source file into an
+  interactive learning web app in the permanent "Atlas" design. One reusable app
+  hosts many courses. Normal use only generates compact course JSON and adds it
+  to the app; it never rebuilds or restyles the application. Works with small
+  Haiku-class models by generating one lesson at a time against a strict schema.
+  Use when the user wants to learn, teach, or onboard onto a repo, topic, or file.
 ---
 
 # Repo Learning Builder
 
-Transform a source into a premium interactive learning web app. Future runs
-reuse the bundled application template. You generate **course data + a small
-theme config only**. Do not rebuild the React interface for each course.
+One permanent web app (the Atlas template) renders many courses. You generate
+**compact course data only**. Never rebuild, redesign, or rewrite the app during
+normal use.
 
-The learner should leave able to explain what the thing is, what problem it
-solves, who uses it, how it works end to end, the technologies and why, how the
-important files connect, how to run/test/modify/extend/debug it, the tradeoffs,
-and how to teach it to someone else. A motivated 10-year-old must follow the
-`eli10` level. Introduce every term before using it.
+Four separate parts:
+1. Permanent app template: `assets/webapp-template/` (all UI, design, logic).
+2. Deterministic scripts: `scripts/` (analysis, scaffold, validate, assemble, register, install).
+3. Compact generated content: `public/courses/<id>/course.json` + `index.json`.
+4. Deterministic validation and field-level repair.
 
-## Workflow (do not skip steps)
+## Normal invocation (the common path)
 
-### 1. Inspect, then ask one compact screen
+Triggers: `/repo-learning-builder <github url>`, `... teach me DNS`,
+`... teach me auth from this project`, `... create a lesson about src/auth/session.ts`.
 
-Quietly inspect available context first (working dir, git, open files, recalled
-memory, attached docs). If a source is already obvious, say so and skip asking
-about it. Then ask ONE compact set of questions with `AskUserQuestion`, each
-with a recommended default and an "Other" escape. Offer "Use recommended
-defaults and build" as the fast path.
+Do only this, in order. Do NOT touch `src/`.
 
-1. **Source**: detected source / current repo / GitHub URL / topic / specific
-   lesson / current session / documents
-2. **Learner level**: ELI10 / Beginner / Intermediate / Advanced
-3. **Goal**: big picture / understand the code / customize / contribute /
-   present it / master everything
-4. **Depth**: quick tour / standard / deep dive
-5. **Learning style**: visual / story / hands-on / code-first / balanced
+1. **Fingerprint + analyze** the source:
+   - `node scripts/fingerprint-source.mjs <path>`
+   - If it matches an existing course's `meta.sourceFingerprint`, reuse it (stop or do incremental only).
+   - `node scripts/analyze-source.mjs <path> --out source-manifest.json` (repos only).
+     See `references/source-analysis.md`. Never dump files or secrets into context.
+2. **Ask one compact questionnaire** with `AskUserQuestion` (offer "Use recommended defaults"):
+   - Learner level: ELI10 / Beginner / Intermediate / Advanced
+   - Goal: big picture / understand code / customize / contribute / present / mastery
+   - Depth: quick / standard / deep
+   - Style: visual / story / hands-on / code-first / balanced
+   Skip anything the source or saved preferences already answer.
+3. **Scaffold**: `node scripts/create-course-scaffold.mjs --id <id> --title "<t>" --source <kind> --depth <d> --manifest source-manifest.json --out scaffold.json`. This fixes course/module/lesson ids and archetypes. Do not invent extra layout.
+4. **Plan**: run `prompts/plan-course.md` to fill titles, summaries, registries (concepts, technologies, sources, glossary). Write it into the scaffold.
+5. **Generate lessons one at a time** with `prompts/generate-lesson.md`, giving the model only that lesson's scaffold, the learner level, allowed registry ids, and the relevant excerpts. Then `prompts/generate-quiz.md` for its checks. Respect the depth word budget in `references/teaching-rules.md`. Never generate the whole course in one response.
+6. **Validate each lesson immediately**: `node scripts/validate-lesson.mjs <lesson.json>`. If invalid, pass only the reported fields to `prompts/repair-json.md`. Retry at most twice; then fall back to a minimal safe lesson.
+7. **Glossary** (optional): `prompts/generate-glossary.md`.
+8. **Assemble**: `node scripts/assemble-course.mjs --scaffold scaffold.json --lessons <dir> --out course.json`, then `node scripts/validate-lesson.mjs course.json --course` and fix errors.
+9. **Install app if missing, then add the course as data**:
+   - First time only: `node scripts/install-template.mjs --dest <app>` then `npm --prefix <app> install`.
+   - Copy `course.json` to `<app>/public/courses/<id>/course.json`.
+   - `node scripts/register-course.mjs --app <app> --course <app>/public/courses/<id>/course.json`.
+10. **Run**: `npm --prefix <app> run dev` (or `run build`). Confirm the course loads.
 
-Do not re-ask anything the repo context or saved preferences already answer.
+Adding a second course repeats steps 1-9 and changes only files under
+`public/courses/`. Never edit `src/`, `package.json`, or reinstall dependencies.
 
-### 2. Analyze the source once, and cache it
+## First installation vs normal use
 
-Follow `references/source-analysis.md`. Do a single analysis pass. Compute a
-fingerprint (`scripts/fingerprint-source.mjs`, prefers the git SHA) and record
-it as `meta.sourceFingerprint` so the analysis is cacheable and regeneration can
-be incremental. Separate verified facts from inferences, cite exact file paths,
-never invent behavior, never print secrets.
+- First install copies the template once and runs `npm install` once.
+- Normal use never copies app code, never edits `package.json`, never reinstalls.
+  `install-template.mjs` is idempotent and refuses to overwrite `src/` without
+  `--force`.
 
-### 3. Confirm the plan (one confirmation)
+## Incremental updates
 
-Show your understanding of the learner, the detected source + category (which
-picks the theme), the proposed outline, the app features, and any assumptions.
-Get a single confirmation.
+Re-fingerprint. If unchanged, reuse. Otherwise map changed files to source ids,
+regenerate only the lessons that cite them, keep the rest, and preserve progress
+via stable lesson ids (`references/source-analysis.md`).
 
-### 4. Generate compact course data (not UI)
+## Model responsibilities
 
-Author a compact v2 `course.json` per `references/curriculum-schema.md`. Use
-lesson **archetypes** (`references/teaching-method.md`) so the renderer supplies
-all repeated labels, facet names, headings, icons, and lesson kinds. Put shared
-material in the **registries** (concepts, sources, tech, glossary, diagrams) and
-reference it by id. Respect the depth budget: quick 3-5, standard 6-12, deep
-12-24 lessons. Do not generate filler to hit a count. Pick the theme from the
-category (or learner choice) per `references/design-system.md`.
-`scripts/scaffold-course.mjs` emits a valid skeleton to fill in.
+The model MAY: choose concepts, explain verified behavior, write analogies,
+exercises, quizzes, and adapt difficulty.
+The model MUST NOT: build components, write CSS, choose dependencies, rewrite
+schemas, copy the template by hand, invent behavior, read every file, or
+regenerate valid unchanged lessons. Full list in `references/teaching-rules.md`.
 
-### 5. Build the app (copy the template, drop in data)
+## References (load only when needed)
 
-Copy `assets/webapp-template/` to the chosen location and place your generated
-`course.json` in `src/data/`. That is it. The template already contains the
-design system, four themes, components, navigation, quiz engine, diagram
-renderer, mastery + spaced repetition, storage, search, and accessibility. If
-the host repo already has a suitable stack, match it; otherwise use the template.
+- `references/course-schema.md` compact v3 schema, registries, archetypes, app layout.
+- `references/teaching-rules.md` voice, the five questions, callouts, budgets, do/don't.
+- `references/source-analysis.md` fingerprint, manifest, caching, incremental regen.
 
-### 6. Validate and verify
+## Scripts
 
-- `node scripts/validate-course.mjs <course.json>` and fix every error.
-- `node scripts/validate-sources.mjs <course.json> <repoPath>` so every cited
-  path is real.
-- `node scripts/expand-course.mjs <course.json>` to sanity-check the expansion.
-- In the app: `npm install`, `npm run test`, `npm run build`. Fix failures.
-- Open it and confirm one real flow (home, a lesson, a quiz, progress persists).
+`fingerprint-source.mjs`, `analyze-source.mjs`, `create-course-scaffold.mjs`,
+`validate-lesson.mjs`, `assemble-course.mjs`, `register-course.mjs`,
+`install-template.mjs`. All deterministic, Node, no dependencies.
 
-### 7. Deliver
+## Prompts (Haiku-friendly, one artifact each)
 
-Report the structure, run commands, what you verified, and any limitations or
-unverified inferences.
-
-## Reference files
-
-- `references/source-analysis.md` analyze repos/topics/sessions/docs; category,
-  fingerprint, caching, budgets.
-- `references/teaching-method.md` archetypes, facets, callouts, lesson anatomy.
-- `references/curriculum-schema.md` the compact v2 `course.json` schema.
-- `references/progress-model.md` persistence, mastery, spaced repetition.
-- `references/design-system.md` the four themes, tokens, and `themeConfig`.
-- `references/generation-workflow.md` token-efficient generation and
-  incremental regeneration.
-
-## Scripts (deterministic helpers)
-
-- `analyze-repository.mjs <repoPath>` languages, manifests, entry points, map.
-- `fingerprint-source.mjs <repoPath>` stable source fingerprint (git SHA first).
-- `scaffold-course.mjs <id> [title] [category]` emit a compact skeleton.
-- `validate-course.mjs <course.json>` validate against the v2 schema.
-- `validate-sources.mjs <course.json> <repoPath>` every cited path must exist.
-- `expand-course.mjs <course.json>` summarize the compact -> runtime expansion.
-- `plan-regeneration.mjs <old.json> <new.json>` diff ids for incremental regen.
+`plan-course.md`, `generate-lesson.md`, `generate-quiz.md`,
+`generate-glossary.md`, `repair-json.md`.
 
 ## Hard rules
 
-- Inspect and ask before building; one confirmation before implementing.
-- Generate data, not UI. Reuse the permanent template.
-- Cite real file paths; label inferences; never reveal secrets.
-- No paid service required for the default local mode.
-- Every visual must improve understanding. No filler, no em dashes.
-- Mastery is demonstrated (quiz, exercise, teach-back), not just opening a page.
+- Never rebuild, redesign, or rewrite the app during normal use.
+- Generate data, not UI. Adding a course changes only `public/courses/`.
+- Cite real source ids; never invent files or behavior; never show secrets.
+- Generate one lesson at a time; validate and repair field-by-field.
+- No filler to hit a lesson count. No em dashes.
