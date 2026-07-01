@@ -9,7 +9,7 @@ import {
   Play, ArrowRight, Sparkles, Flame, Trophy, Download, Upload, RotateCcw, Menu, X,
   Quote, TriangleAlert, Info, PartyPopper, GraduationCap, ListChecks, Clock, Timer,
   ArrowLeftRight, FileCode, Wrench, Sprout, Leaf, ShieldCheck, Eye, EyeOff, HelpCircle,
-  MapPin, Settings, Plus, Minus, User, StickyNote,
+  MapPin, Settings, Plus, Minus, User, StickyNote, ShieldAlert, MousePointerClick, Pause,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -21,7 +21,7 @@ const MAP: Record<string, LucideIcon> = {
   Play, ArrowRight, Sparkles, Flame, Trophy, Download, Upload, RotateCcw, Menu, X,
   Quote, TriangleAlert, Info, PartyPopper, GraduationCap, ListChecks, Clock, Timer,
   ArrowLeftRight, FileCode, Wrench, Sprout, Leaf, ShieldCheck, Eye, EyeOff, HelpCircle,
-  MapPin, Settings, Plus, Minus, User, StickyNote,
+  MapPin, Settings, Plus, Minus, User, StickyNote, ShieldAlert, MousePointerClick, Pause,
 };
 
 export function Icon({

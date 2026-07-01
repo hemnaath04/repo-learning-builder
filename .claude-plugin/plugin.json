@@ -1,7 +1,7 @@
 {
   "name": "repo-learning-builder",
   "description": "Turn a repository, GitHub URL, topic, or a single source file into an interactive learning web app in the permanent Atlas design. One reusable app hosts many courses; each run generates only compact course JSON. Works with small Haiku-class models.",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "author": {
     "name": "Hemnaath Balasubramani"
   },

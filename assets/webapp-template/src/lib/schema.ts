@@ -8,7 +8,7 @@ import type { Archetype } from './archetypes';
 
 export type ExplanationLevel = 'eli10' | 'beginner' | 'intermediate' | 'advanced';
 export type SectionKey = 'what' | 'why' | 'how' | 'connects' | 'ifChanged';
-export type CalloutKind = 'example' | 'analogy' | 'insight' | 'warning';
+export type CalloutKind = 'example' | 'analogy' | 'insight' | 'warning' | 'misconception';
 
 // ---------------------------------------------------------------------------
 // Runtime types (post-expansion)
@@ -18,13 +18,40 @@ export interface Tech { id: string; name: string; purpose?: string; location?: s
 export interface Concept { id: string; name: string; summary?: string }
 export interface GlossaryEntry { term: string; definition: string; seeAlso?: string[] }
 export interface Diagram { id: string; title: string; code: string }
-export interface RepoNode { name: string; kind: 'dir' | 'file'; path: string; role?: string; importance?: number; children?: RepoNode[] }
+export interface RepoNode {
+  name: string; kind: 'dir' | 'file'; path: string; role?: string; importance?: number; children?: RepoNode[];
+  // Optional richer file details (all omitted for topic courses).
+  purpose?: string;
+  symbols?: string[];
+  io?: string;
+  imports?: string[];
+  callers?: string[];
+  related?: string[];
+  concerns?: string;
+  lessonIds?: string[];
+}
 export interface Facet { key: SectionKey; label: string; body: string }
-export interface Callout { kind: CalloutKind; body: string }
+export interface AnalogyPair { from: string; to: string }
+export interface Callout { kind: CalloutKind; body: string; pairs?: AnalogyPair[] }
 export interface FlowStep { actor: string; action: string; note?: string }
+
+// --- Pedagogy blocks (all optional, additive to schema v3) ---------------
+// A prediction the learner commits to before the mechanism is shown.
+export interface Predict { question: string; options?: string[]; reveal: string }
+// One real input traced through the system, with the live state at each step.
+export interface WorkedStep { label: string; detail?: string; state?: Array<{ k: string; v: string }> }
+export interface Worked { title?: string; intro: string; steps: WorkedStep[]; outcome?: string }
+// A what-if explorer: the learner picks an input and watches what happens.
+export interface ScenarioChoice { label: string; steps: string[]; outcome: string }
+export interface Scenario { title?: string; prompt: string; choices: ScenarioChoice[] }
+// A static image shipped next to course.json (or an absolute URL).
+export interface Figure { src: string; alt: string; caption?: string }
 export interface CompareRow { aspect: string; a: string; b: string }
 export interface CompareTable { a: string; b: string; rows: CompareRow[] }
-export interface WalkthroughStep { path?: string; lines?: string; code: string; note?: string; highlight?: number[] }
+export interface WalkthroughStep {
+  path?: string; lines?: string; code: string; note?: string; highlight?: number[];
+  inputs?: string[]; outputs?: string[]; deps?: string[]; failure?: string[];
+}
 export interface QuizItem { id: string; question: string; options: string[]; answerIndex: number; hint?: string; explanation: string }
 
 export interface Lesson {
@@ -49,6 +76,10 @@ export interface Lesson {
   activity?: string;
   teachBack?: string;
   deeper?: string;
+  predict?: Predict;
+  worked?: Worked;
+  scenario?: Scenario;
+  figure?: Figure;
   moduleId?: string;
 }
 
@@ -129,12 +160,18 @@ export interface CompactLesson {
   sections?: Partial<Record<SectionKey, string>>;
   example?: string;
   analogy?: string;
+  analogyPairs?: AnalogyPair[]; // "in the story" -> "in this system" mapping under the analogy
   insight?: string;
   warning?: string;
+  misconception?: string;
   checks?: string[]; // ids into top-level checks registry
   activity?: string;
   diagram?: string;
-  walkthrough?: { src?: string; code: string; note?: string; highlight?: number[] }[];
+  predict?: Predict;
+  worked?: Worked;
+  scenario?: Scenario;
+  figure?: Figure;
+  walkthrough?: { src?: string; code: string; note?: string; highlight?: number[]; inputs?: string[]; outputs?: string[]; deps?: string[]; failure?: string[] }[];
   flow?: FlowStep[];
   compare?: CompareTable;
   teachBack?: string;
@@ -218,6 +255,34 @@ export function validateCourse(course: unknown): ValidationResult {
         for (const id of l?.techIds ?? []) if (!techIds.has(id)) warnings.push(`${lw}: tech "${id}" not in registries.technologies`);
         for (const id of l?.checks ?? []) if (!checkIds.has(id)) warnings.push(`${lw}: check "${id}" not in checks`);
         if (l?.diagram && !diagramIds.has(l.diagram)) warnings.push(`${lw}: diagram "${l.diagram}" not in diagrams`);
+        if (l?.predict) {
+          if (!l.predict.question || !l.predict.reveal) errors.push(`${lw}: predict needs question and reveal`);
+          if (l.predict.options && (!Array.isArray(l.predict.options) || l.predict.options.length < 2)) errors.push(`${lw}: predict.options must have >= 2 entries`);
+        }
+        if (l?.worked) {
+          if (!l.worked.intro) errors.push(`${lw}: worked needs an intro`);
+          if (!Array.isArray(l.worked.steps) || l.worked.steps.length === 0) errors.push(`${lw}: worked.steps must be non-empty`);
+          else l.worked.steps.forEach((st: any, si: number) => {
+            if (!st?.label) errors.push(`${lw}: worked.steps[${si}] missing label`);
+            if (st?.state && (!Array.isArray(st.state) || st.state.some((p: any) => !p?.k || typeof p.v !== 'string'))) errors.push(`${lw}: worked.steps[${si}].state must be [{k,v}] strings`);
+          });
+        }
+        if (l?.scenario) {
+          if (!l.scenario.prompt) errors.push(`${lw}: scenario needs a prompt`);
+          if (!Array.isArray(l.scenario.choices) || l.scenario.choices.length === 0) errors.push(`${lw}: scenario.choices must be non-empty`);
+          else l.scenario.choices.forEach((ch: any, ci: number) => {
+            if (!ch?.label || !ch?.outcome) errors.push(`${lw}: scenario.choices[${ci}] needs label and outcome`);
+            if (ch?.steps && !Array.isArray(ch.steps)) errors.push(`${lw}: scenario.choices[${ci}].steps must be an array`);
+          });
+        }
+        if (l?.figure && (!l.figure.src || !l.figure.alt)) errors.push(`${lw}: figure needs src and alt`);
+        if (l?.analogyPairs) {
+          if (!Array.isArray(l.analogyPairs) || l.analogyPairs.some((p: any) => !p?.from || !p?.to)) errors.push(`${lw}: analogyPairs must be [{from,to}]`);
+          if (!l.analogy) warnings.push(`${lw}: analogyPairs without an analogy`);
+        }
+        // Pedagogy nudges (advisory): every lesson should show, not just tell.
+        if (!l?.example && !l?.worked && !l?.scenario && !l?.walkthrough) warnings.push(`${lw}: no concrete example (example, worked, scenario, or walkthrough)`);
+        if (!l?.activity && !['story', 'teach-back', 'overview'].includes(l?.type)) warnings.push(`${lw}: no activity`);
       });
     });
   }

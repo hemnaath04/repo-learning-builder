@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Markdown } from './Markdown';
 import { Disclosure } from './Disclosure';
@@ -10,6 +10,9 @@ import { Callout } from './Callout';
 import { FlowSteps } from './FlowSteps';
 import { CompareTable } from './CompareTable';
 import { TechCards } from './TechCards';
+import { PredictReveal } from './PredictReveal';
+import { WorkedExample } from './WorkedExample';
+import { ScenarioPlayer } from './ScenarioPlayer';
 import { Icon } from './Icon';
 import { nextLesson, prevLesson, completionPercent } from '../lib/navigation';
 
@@ -29,7 +32,7 @@ function useScrollProgress(): number {
 }
 
 export function LessonReader({ lessonId }: { lessonId: string }) {
-  const { course, progress, actions, navigate } = useApp();
+  const { course, progress, actions, navigate, courseId } = useApp();
   const lesson = course?.modules.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
   const moduleOf = course?.modules.find((m) => m.lessons.some((l) => l.id === lessonId));
   const reading = progress?.preferences.reducedChrome ?? false;
@@ -44,6 +47,20 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
 
   const next = useMemo(() => (course ? nextLesson(course, lessonId) : null), [course, lessonId]);
   const prev = useMemo(() => (course ? prevLesson(course, lessonId) : null), [course, lessonId]);
+
+  // Sections unfold as you read. Elements above the fold reveal immediately;
+  // without IntersectionObserver (tests, old browsers) everything stays visible.
+  useLayoutEffect(() => {
+    const els = document.querySelectorAll('.reader-main .section, .reader-main .callout, .reader-main .predict');
+    if (typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('in-view'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    els.forEach((el) => { el.classList.add('will-reveal'); io.observe(el); });
+    return () => io.disconnect();
+  }, [lessonId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,12 +82,19 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
     .map((c) => (c ? c.summary ?? c.name : null))
     .filter((s): s is string => Boolean(s));
 
+  // Course assets (figures) live next to course.json: courses/<id>/<file>.
+  const figureSrc = lesson.figure
+    ? (/^(https?:)?\//.test(lesson.figure.src) ? lesson.figure.src : `courses/${courseId}/${lesson.figure.src}`)
+    : null;
+
   const sections: Array<{ id: string; label: string }> = [];
   if (lesson.summary) sections.push({ id: 'overview', label: 'Overview' });
   if (lesson.facets?.length) sections.push({ id: 'idea', label: 'The idea' });
   if (lesson.diagram) sections.push({ id: 'diagram', label: 'Diagram' });
   if (lesson.flow?.length) sections.push({ id: 'flow', label: 'Flow' });
+  if (lesson.worked) sections.push({ id: 'run', label: 'Example run' });
   if (lesson.walkthrough?.length) sections.push({ id: 'code', label: 'Code' });
+  if (lesson.scenario) sections.push({ id: 'whatif', label: 'What if' });
   if (lesson.tech?.length) sections.push({ id: 'tech', label: 'Tech' });
   if (lesson.quiz?.length) sections.push({ id: 'check', label: 'Check' });
   if (recap.length) sections.push({ id: 'recap', label: 'Recap' });
@@ -113,8 +137,18 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
           {lesson.facets && lesson.facets.length > 0 && (
             <section id="idea" className="section">
               <h2><Icon name="Lightbulb" size={18} /> The idea</h2>
-              <FacetSwitcher facets={lesson.facets} />
+              {/* key by lesson so a newly opened lesson resets to "What is it?" */}
+              <FacetSwitcher key={lessonId} facets={lesson.facets} />
             </section>
+          )}
+
+          {lesson.predict && <PredictReveal key={`p-${lessonId}`} data={lesson.predict} />}
+
+          {lesson.figure && figureSrc && (
+            <figure className="lesson-figure">
+              <img src={figureSrc} alt={lesson.figure.alt} loading="lazy" />
+              {lesson.figure.caption && <figcaption>{lesson.figure.caption}</figcaption>}
+            </figure>
           )}
 
           {lesson.diagram && (
@@ -131,10 +165,24 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
             </section>
           )}
 
+          {lesson.worked && (
+            <section id="run" className="section">
+              <h2><Icon name="Play" size={18} /> {lesson.worked.title ?? 'Watch it run'}</h2>
+              <WorkedExample key={`w-${lessonId}`} data={lesson.worked} />
+            </section>
+          )}
+
           {lesson.walkthrough && lesson.walkthrough.length > 0 && (
             <section id="code" className="section">
               <h2><Icon name="Code2" size={18} /> Code walkthrough</h2>
               <CodeWalkthrough steps={lesson.walkthrough} />
+            </section>
+          )}
+
+          {lesson.scenario && (
+            <section id="whatif" className="section">
+              <h2><Icon name="FlaskConical" size={18} /> {lesson.scenario.title ?? 'What happens if...'}</h2>
+              <ScenarioPlayer key={`s-${lessonId}`} data={lesson.scenario} />
             </section>
           )}
 
@@ -221,16 +269,20 @@ export function LessonReader({ lessonId }: { lessonId: string }) {
             <button className="btn ghost" disabled={!prev} onClick={() => prev && navigate({ view: 'lesson', lessonId: prev.id })}>
               <Icon name="ChevronLeft" size={16} /> Previous
             </button>
-            <button className={`btn ${completed ? 'ghost' : ''}`} onClick={() => actions.completeLesson(lessonId, !completed)}>
-              <Icon name={completed ? 'RotateCcw' : 'Check'} size={16} /> {completed ? 'Mark as not done' : 'Mark complete'}
-            </button>
+            {/* Only an undo affordance once complete; the primary is the single
+                control that marks complete, so there are never two that do the same thing. */}
+            {completed && (
+              <button className="btn ghost" onClick={() => actions.completeLesson(lessonId, false)}>
+                <Icon name="RotateCcw" size={16} /> Mark as not done
+              </button>
+            )}
             {next ? (
               <button className="btn primary" onClick={() => { if (!completed) actions.completeLesson(lessonId, true); navigate({ view: 'lesson', lessonId: next.id }); }}>
-                Continue <Icon name="ChevronRight" size={16} />
+                {completed ? 'Continue' : 'Complete and continue'} <Icon name="ChevronRight" size={16} />
               </button>
             ) : (
               <button className="btn primary" onClick={() => { if (!completed) actions.completeLesson(lessonId, true); navigate({ view: 'certificate' }); }}>
-                Finish <Icon name="Trophy" size={16} />
+                {completed ? 'Finish' : 'Complete and finish'} <Icon name="Trophy" size={16} />
               </button>
             )}
           </footer>

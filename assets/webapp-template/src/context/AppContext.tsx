@@ -42,6 +42,14 @@ interface AppContextValue {
 
 const Ctx = createContext<AppContextValue | null>(null);
 
+const LAST_COURSE_KEY = 'rlb:lastCourse';
+function readLastCourse(): string | undefined {
+  try { return localStorage.getItem(LAST_COURSE_KEY) ?? undefined; } catch { return undefined; }
+}
+function writeLastCourse(id: string): void {
+  try { localStorage.setItem(LAST_COURSE_KEY, id); } catch { /* ignore */ }
+}
+
 function systemTheme(): 'light' | 'dark' {
   if (typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -100,12 +108,14 @@ export function AppProvider({
         if (cancelled) return;
         setRegistry(reg);
         if (reg.courses.length === 0) { setStatus('empty'); return; }
-        const wanted = parseHash().courseId;
+        // Course selection precedence: URL hash, then persisted last course, then first.
+        const wanted = parseHash().courseId ?? readLastCourse();
         const pick = reg.courses.find((c) => c.id === wanted) ?? reg.courses[0];
         const loaded = await fetchCourse(pick.id);
         if (cancelled) return;
         setCourse(loaded);
         setCourseId(pick.id);
+        writeLastCourse(pick.id);
         setStatus('ready');
       } catch (e) {
         if (!cancelled) { setError((e as Error).message); setStatus('error'); }
@@ -160,12 +170,25 @@ export function AppProvider({
       const loaded = await fetchCourse(id);
       setCourse(loaded);
       setCourseId(id);
-      setRoute({ view: 'atlas' });
+      writeLastCourse(id);
       setStatus('ready');
+      // Always land on the atlas for the new course, and sync the URL so a
+      // reload restores this course and section (not the previous one).
+      const next: Route = { view: 'atlas' };
+      setRoute(next);
+      if (typeof window !== 'undefined') window.location.hash = hashFor(id, next);
     } catch (e) {
       setError((e as Error).message); setStatus('error');
     }
   }, [courseId]);
+
+  // A section that does not apply to the current course (e.g. the repository
+  // explorer on a topic course) falls back to the atlas.
+  const isRepoCourse = course?.meta.sourceType === 'repository' || course?.meta.sourceType === 'github-url';
+  useEffect(() => {
+    if (course && !isRepoCourse && route.view === 'explorer') navigate({ view: 'atlas' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course, isRepoCourse, route.view]);
 
   const actions = useMemo<AppContextValue['actions']>(() => {
     const s = () => storeRef.current!;

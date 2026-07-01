@@ -9,7 +9,7 @@ import {
 } from './schema';
 import { archetypeSpec, SECTION_LABELS, SECTION_ORDER } from './archetypes';
 
-const CALLOUT_KEYS: CalloutKind[] = ['example', 'analogy', 'insight', 'warning'];
+const CALLOUT_KEYS: CalloutKind[] = ['example', 'analogy', 'misconception', 'insight', 'warning'];
 
 function expandLesson(
   raw: CompactLesson,
@@ -26,14 +26,21 @@ function expandLesson(
         .map((k) => ({ key: k, label: SECTION_LABELS[k], body: raw.sections![k]! }))
     : undefined;
 
-  const callouts: Callout[] = CALLOUT_KEYS.filter((k) => raw[k]).map((k) => ({ kind: k, body: raw[k] as string }));
+  const callouts: Callout[] = CALLOUT_KEYS.filter((k) => raw[k]).map((k) => (
+    k === 'analogy'
+      ? { kind: k, body: raw[k] as string, pairs: raw.analogyPairs?.length ? raw.analogyPairs : undefined }
+      : { kind: k, body: raw[k] as string }
+  ));
 
   const sources = (raw.sourceIds ?? []).map((id) => sourcesById.get(id)).filter((s): s is SourceRef => Boolean(s));
   const tech = (raw.techIds ?? []).map((id) => techById.get(id)).filter((t): t is Tech => Boolean(t));
 
   const walkthrough = raw.walkthrough?.map((step) => {
     const src = step.src ? sourcesById.get(step.src) : undefined;
-    return { path: src?.path, lines: src?.lines, code: step.code, note: step.note, highlight: step.highlight };
+    return {
+      path: src?.path, lines: src?.lines, code: step.code, note: step.note, highlight: step.highlight,
+      inputs: step.inputs, outputs: step.outputs, deps: step.deps, failure: step.failure,
+    };
   });
 
   const quiz: QuizItem[] | undefined = raw.checks
@@ -67,6 +74,10 @@ function expandLesson(
     activity: raw.activity,
     teachBack: raw.teachBack,
     deeper: raw.deeper,
+    predict: raw.predict,
+    worked: raw.worked,
+    scenario: raw.scenario,
+    figure: raw.figure,
   };
 }
 

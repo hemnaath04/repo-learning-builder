@@ -17,8 +17,32 @@ connects to it? / What happens if it changes?".
 
 ## Callouts
 
-`example`, `analogy`, `insight`, `warning`. Use sparingly and only when they aid
-understanding. Analogies must map accurately to the real behavior.
+`example`, `analogy`, `insight`, `warning`, `misconception`. Use sparingly and
+only when they aid understanding. Analogies must map accurately to the real
+behavior; when you write one, add `analogyPairs` mapping story parts to system
+parts. A `misconception` names the wrong belief a learner plausibly holds and
+corrects it immediately.
+
+## Show, don't just tell (per lesson)
+
+Every lesson needs at least one concrete anchor: an `example` with real values,
+a `worked` trace, a `scenario`, or a `walkthrough`. The validator warns when a
+lesson has none.
+
+- `worked` (worked-example effect, the strongest tool for novices): trace ONE
+  real input end to end in 4-8 steps; each step's `state` shows the actual data
+  at that moment (real field names, realistic values, real function names for
+  repo courses). Target: at least one `worked` per module for standard/deep.
+- `scenario` (what-if exploration): 2-4 alternative inputs and what the system
+  truly does with each, including the failure branch. Use the code's real
+  branches (e.g. the missing-photo reply, the 403 on a bad signature), never
+  invented ones. 1-3 per course.
+- `predict` (generation effect): one short question the learner answers before
+  the mechanism is revealed. Best on flow, architecture, and debugging lessons.
+  The reveal must state the answer and why. Aim for one per module.
+- `activity`: something the learner can actually do in under five minutes
+  (run a command, trace a call, break a thing safely). Required for hands-on
+  archetypes; the validator warns when missing.
 
 ## Voice
 

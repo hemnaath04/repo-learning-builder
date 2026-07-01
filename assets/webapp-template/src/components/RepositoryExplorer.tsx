@@ -60,7 +60,13 @@ export function RepositoryExplorer() {
                   <h3><Icon name={selected.kind === 'dir' ? 'FolderTree' : 'FileCode'} size={16} /> {selected.name}</h3>
                   <dl>
                     <dt>Path</dt><dd><code>{selected.path}</code></dd>
-                    {selected.role && (<><dt>What it does</dt><dd>{selected.role}</dd></>)}
+                    {(selected.purpose || selected.role) && (<><dt>Purpose</dt><dd>{selected.purpose ?? selected.role}</dd></>)}
+                    {selected.symbols?.length ? (<><dt>Important symbols</dt><dd>{selected.symbols.map((s) => <code key={s} className="chiplet">{s}</code>)}</dd></>) : null}
+                    {selected.io && (<><dt>Inputs and outputs</dt><dd>{selected.io}</dd></>)}
+                    {selected.imports?.length ? (<><dt>Imports</dt><dd>{selected.imports.join(', ')}</dd></>) : null}
+                    {selected.callers?.length ? (<><dt>Callers</dt><dd>{selected.callers.join(', ')}</dd></>) : null}
+                    {selected.related?.length ? (<><dt>Related files</dt><dd>{selected.related.map((r) => <code key={r} className="chiplet">{r}</code>)}</dd></>) : null}
+                    {selected.concerns && (<><dt>Failure / security</dt><dd>{selected.concerns}</dd></>)}
                     <dt>Related lessons</dt>
                     <dd>{related.length === 0 ? <span className="muted">None cite this path.</span> : (
                       <ul style={{ margin: 0, paddingLeft: '1rem' }}>{related.map((l) => (
@@ -68,6 +74,10 @@ export function RepositoryExplorer() {
                       ))}</ul>
                     )}</dd>
                   </dl>
+                  <div className="component-actions">
+                    {related[0] && <button className="btn primary" onClick={() => navigate({ view: 'lesson', lessonId: related[0].id })}><Icon name="BookOpen" size={14} /> Learn this file</button>}
+                    <button className="btn" onClick={() => { navigator.clipboard?.writeText(selected.path).catch(() => {}); }}><Icon name="FileCode" size={14} /> Copy path</button>
+                  </div>
                 </>
               ) : <p className="muted">Select a file or folder to see what it does and which lessons cover it.</p>}
             </div>

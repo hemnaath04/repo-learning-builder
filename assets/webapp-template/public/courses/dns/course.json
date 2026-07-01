@@ -14,40 +14,121 @@
     "goal": "Big-picture understanding",
     "depth": "quick",
     "style": "story",
-    "estimatedMinutes": 22,
-    "outcomes": ["Explain what DNS does in one sentence", "Trace a lookup from name to IP", "Explain why caching and TTL matter"],
-    "levels": ["eli10", "beginner", "intermediate", "advanced"],
+    "estimatedMinutes": 25,
+    "outcomes": [
+      "Explain what DNS does in one sentence",
+      "Trace a lookup from name to IP",
+      "Explain why caching and TTL matter"
+    ],
+    "levels": [
+      "eli10",
+      "beginner",
+      "intermediate",
+      "advanced"
+    ],
     "defaultLevel": "beginner"
   },
   "registries": {
     "concepts": {
-      "c-name": { "name": "Domain names", "summary": "Human-friendly labels that stand in for numeric addresses." },
-      "c-resolver": { "name": "The resolver", "summary": "The helper that does the lookup work on your behalf." },
-      "c-hierarchy": { "name": "The hierarchy", "summary": "Root, TLD, and authoritative servers each answer part of the name." },
-      "c-cache": { "name": "Caching and TTL", "summary": "Answers are remembered for a while to make the web fast." }
+      "c-name": {
+        "name": "Domain names",
+        "summary": "Human-friendly labels that stand in for numeric addresses."
+      },
+      "c-resolver": {
+        "name": "The resolver",
+        "summary": "The helper that does the lookup work on your behalf."
+      },
+      "c-hierarchy": {
+        "name": "The hierarchy",
+        "summary": "Root, TLD, and authoritative servers each answer part of the name."
+      },
+      "c-cache": {
+        "name": "Caching and TTL",
+        "summary": "Answers are remembered for a while to make the web fast."
+      }
     },
     "glossary": {
-      "g-dns": { "term": "DNS", "definition": "Domain Name System: the service that turns names like example.com into IP addresses." },
-      "g-ip": { "term": "IP address", "definition": "The numeric address of a machine on a network, like a phone number for a server." },
-      "g-resolver": { "term": "Resolver", "definition": "The DNS client (often run by your ISP) that finds the answer for you." },
-      "g-ttl": { "term": "TTL", "definition": "Time To Live: how long a DNS answer may be cached before it must be looked up again." },
-      "g-ns": { "term": "Nameserver", "definition": "A server that holds DNS records and answers questions about a domain." }
+      "g-dns": {
+        "term": "DNS",
+        "definition": "Domain Name System: the service that turns names like example.com into IP addresses."
+      },
+      "g-ip": {
+        "term": "IP address",
+        "definition": "The numeric address of a machine on a network, like a phone number for a server."
+      },
+      "g-resolver": {
+        "term": "Resolver",
+        "definition": "The DNS client (often run by your ISP) that finds the answer for you."
+      },
+      "g-ttl": {
+        "term": "TTL",
+        "definition": "Time To Live: how long a DNS answer may be cached before it must be looked up again."
+      },
+      "g-ns": {
+        "term": "Nameserver",
+        "definition": "A server that holds DNS records and answers questions about a domain."
+      }
     }
   },
   "checks": {
-    "chk-what": { "q": "What does DNS turn a domain name into?", "options": ["An IP address", "A password", "A web page", "An email"], "answer": 0, "hint": "Think address book.", "why": "DNS resolves a human-friendly name to the numeric IP address a computer needs to connect." },
-    "chk-cache": { "q": "Why does DNS cache answers with a TTL?", "options": ["To hide the answer", "To avoid repeating lookups and keep the web fast", "To use more memory", "It does not cache"], "answer": 1, "hint": "Speed.", "why": "Caching for the TTL avoids asking again for every visit, which makes browsing fast and reduces load." },
-    "chk-hier": { "q": "Which server gives the final authoritative answer for example.com?", "options": ["The root server", "The .com TLD server", "The domain's authoritative nameserver", "Your router"], "answer": 2, "hint": "Follow the chain to the end.", "why": "Root points to the TLD, the TLD points to the domain's authoritative nameserver, which holds the actual record." }
+    "chk-what": {
+      "q": "What does DNS turn a domain name into?",
+      "options": [
+        "An IP address",
+        "A password",
+        "A web page",
+        "An email"
+      ],
+      "answer": 0,
+      "hint": "Think address book.",
+      "why": "DNS resolves a human-friendly name to the numeric IP address a computer needs to connect."
+    },
+    "chk-cache": {
+      "q": "Why does DNS cache answers with a TTL?",
+      "options": [
+        "To hide the answer",
+        "To avoid repeating lookups and keep the web fast",
+        "To use more memory",
+        "It does not cache"
+      ],
+      "answer": 1,
+      "hint": "Speed.",
+      "why": "Caching for the TTL avoids asking again for every visit, which makes browsing fast and reduces load."
+    },
+    "chk-hier": {
+      "q": "Which server gives the final authoritative answer for example.com?",
+      "options": [
+        "The root server",
+        "The .com TLD server",
+        "The domain's authoritative nameserver",
+        "Your router"
+      ],
+      "answer": 2,
+      "hint": "Follow the chain to the end.",
+      "why": "Root points to the TLD, the TLD points to the domain's authoritative nameserver, which holds the actual record."
+    }
   },
   "diagrams": {
-    "d-flow": { "title": "A DNS lookup", "code": "flowchart LR\n  U[Your app] --> R[Resolver]\n  R --> ROOT[Root server]\n  ROOT --> TLD[.com server]\n  TLD --> AUTH[Authoritative NS]\n  AUTH --> R\n  R --> U" }
+    "d-flow": {
+      "title": "A DNS lookup",
+      "code": "flowchart LR\n  U[Your app] --> R[Resolver]\n  R --> ROOT[Root server]\n  ROOT --> TLD[.com server]\n  TLD --> AUTH[Authoritative NS]\n  AUTH --> R\n  R --> U"
+    }
   },
   "modules": [
     {
-      "id": "m-story", "title": "The idea", "summary": "What DNS is and why it exists.", "icon": "BookOpen",
+      "id": "m-story",
+      "title": "The idea",
+      "summary": "What DNS is and why it exists.",
+      "icon": "BookOpen",
       "lessons": [
         {
-          "id": "l-what", "type": "story", "title": "The internet's address book", "est": 5, "conceptIds": ["c-name"],
+          "id": "l-what",
+          "type": "story",
+          "title": "The internet's address book",
+          "est": 5,
+          "conceptIds": [
+            "c-name"
+          ],
           "summary": "Computers talk using numbers, but people remember names. DNS is the address book that connects the two.",
           "sections": {
             "what": "DNS (Domain Name System) turns a name like example.com into an IP address a computer can connect to.",
@@ -57,16 +138,52 @@
             "ifChanged": "Without DNS you would have to type a numeric address for every site, and those numbers change over time."
           },
           "analogy": "DNS is a phone book: you know the person's name, and it finds their number so you can call.",
-          "checks": ["chk-what"],
-          "teachBack": "Explain DNS to a friend in one sentence, without using the word 'address'."
+          "checks": [
+            "chk-what"
+          ],
+          "teachBack": "Explain DNS to a friend in one sentence, without using the word 'address'.",
+          "predict": {
+            "question": "You type wikipedia.org and press Enter. What does your computer need FIRST, before anything can load?",
+            "options": [
+              "The page's HTML",
+              "An IP address for the server",
+              "Your wifi password",
+              "A cookie from the site"
+            ],
+            "reveal": "An IP address. Nothing can be requested until DNS turns wikipedia.org into a number your computer can open a connection to. Only then does the browser ask that server for the page."
+          },
+          "analogyPairs": [
+            {
+              "from": "A name in the phone book",
+              "to": "The domain name (example.com)"
+            },
+            {
+              "from": "The phone number",
+              "to": "The IP address (93.184.216.34)"
+            },
+            {
+              "from": "Looking it up once, then remembering it",
+              "to": "Caching the answer for the TTL"
+            }
+          ],
+          "misconception": "DNS does not store or deliver web pages. It only maps a name to an address; the page itself comes from the web server in a separate step afterwards."
         }
       ]
     },
     {
-      "id": "m-flow", "title": "The lookup", "summary": "How a name becomes a number.", "icon": "Route",
+      "id": "m-flow",
+      "title": "The lookup",
+      "summary": "How a name becomes a number.",
+      "icon": "Route",
       "lessons": [
         {
-          "id": "l-resolver", "type": "concept", "title": "The resolver does the work", "est": 5, "conceptIds": ["c-resolver"],
+          "id": "l-resolver",
+          "type": "concept",
+          "title": "The resolver does the work",
+          "est": 5,
+          "conceptIds": [
+            "c-resolver"
+          ],
           "summary": "You do not search the whole internet yourself. A resolver asks the right servers for you.",
           "sections": {
             "what": "A resolver is the DNS client that takes your question and returns the final answer.",
@@ -76,10 +193,118 @@
             "ifChanged": "A slow or broken resolver makes every site feel slow or unreachable, even when the sites are fine."
           },
           "example": "Type example.com and your resolver returns something like 93.184.216.34 for the browser to connect to.",
-          "checks": ["chk-hier"]
+          "checks": [
+            "chk-hier"
+          ],
+          "worked": {
+            "title": "Watch one lookup run",
+            "intro": "A fresh laptop on a new network types **wikipedia.org**. Field names are real DNS concepts; the values show one realistic run.",
+            "steps": [
+              {
+                "label": "The browser checks its own cache",
+                "detail": "Nothing there: this machine has never looked the name up.",
+                "state": [
+                  {
+                    "k": "question",
+                    "v": "wikipedia.org A?"
+                  },
+                  {
+                    "k": "browser cache",
+                    "v": "empty"
+                  }
+                ]
+              },
+              {
+                "label": "The OS hands the question to the resolver",
+                "detail": "The resolver (often your ISP's, or a public one like 1.1.1.1) now does all the work.",
+                "state": [
+                  {
+                    "k": "resolver",
+                    "v": "1.1.1.1"
+                  },
+                  {
+                    "k": "question",
+                    "v": "wikipedia.org A?"
+                  }
+                ]
+              },
+              {
+                "label": "The resolver asks a root server",
+                "detail": "Root servers do not know the answer, but they know who handles .org.",
+                "state": [
+                  {
+                    "k": "asked",
+                    "v": "root server"
+                  },
+                  {
+                    "k": "reply",
+                    "v": "ask the .org TLD servers"
+                  }
+                ]
+              },
+              {
+                "label": "The resolver asks the .org TLD server",
+                "detail": "One step closer: .org knows which nameservers speak for wikipedia.org.",
+                "state": [
+                  {
+                    "k": "asked",
+                    "v": ".org TLD server"
+                  },
+                  {
+                    "k": "reply",
+                    "v": "ask ns0.wikimedia.org"
+                  }
+                ]
+              },
+              {
+                "label": "The authoritative nameserver answers",
+                "detail": "This server is run for the domain owner and holds the actual record.",
+                "state": [
+                  {
+                    "k": "asked",
+                    "v": "ns0.wikimedia.org"
+                  },
+                  {
+                    "k": "answer",
+                    "v": "185.15.59.224"
+                  },
+                  {
+                    "k": "TTL",
+                    "v": "300 s"
+                  }
+                ]
+              },
+              {
+                "label": "The answer flows back and is cached",
+                "detail": "The resolver and your OS both remember it for the TTL.",
+                "state": [
+                  {
+                    "k": "returned",
+                    "v": "185.15.59.224"
+                  },
+                  {
+                    "k": "cached for",
+                    "v": "300 s"
+                  },
+                  {
+                    "k": "browser",
+                    "v": "opens the connection"
+                  }
+                ]
+              }
+            ],
+            "outcome": "The browser connects to 185.15.59.224 and only then requests the page. The whole chain usually takes well under 100 ms, and the next lookup is instant because of the cache."
+          },
+          "activity": "Run `dig wikipedia.org` (or use an online dig tool) and find the IP and the TTL column in the ANSWER section."
         },
         {
-          "id": "l-hierarchy", "type": "architecture", "title": "Root, TLD, authoritative", "est": 6, "conceptIds": ["c-hierarchy"],
+          "id": "l-hierarchy",
+          "type": "architecture",
+          "title": "Root, TLD, authoritative",
+          "est": 6,
+          "conceptIds": [
+            "c-hierarchy"
+          ],
           "summary": "No single server knows every name. The work is split across a hierarchy that each answer part of the question.",
           "sections": {
             "what": "The name is resolved in steps: root server, then the TLD server (.com), then the domain's authoritative nameserver.",
@@ -90,15 +315,51 @@
           },
           "analogy": "It is like finding a house: country, then city, then street, then the exact address.",
           "diagram": "d-flow",
-          "activity": "Run `dig example.com +trace` (or an online DNS trace) and watch it walk root to authoritative."
+          "activity": "Run `dig example.com +trace` (or an online DNS trace) and watch it walk root to authoritative.",
+          "analogyPairs": [
+            {
+              "from": "Country",
+              "to": "Root server (knows who handles each TLD)"
+            },
+            {
+              "from": "City",
+              "to": "TLD server (.org, .com)"
+            },
+            {
+              "from": "Street",
+              "to": "Authoritative nameserver for the domain"
+            },
+            {
+              "from": "House number",
+              "to": "The DNS record itself (the IP)"
+            }
+          ],
+          "predict": {
+            "question": "A root server goes offline right now. What do you notice while browsing?",
+            "options": [
+              "Half the internet stops working",
+              "Only .com domains break",
+              "Nothing noticeable"
+            ],
+            "reveal": "Nothing noticeable. There are 13 root server identities served by hundreds of machines around the world (anycast), and resolvers cache the root's referrals anyway. The system is built so no single machine matters."
+          }
         }
       ]
     },
     {
-      "id": "m-fast", "title": "Why it feels instant", "summary": "Caching and TTL.", "icon": "Cpu",
+      "id": "m-fast",
+      "title": "Why it feels instant",
+      "summary": "Caching and TTL.",
+      "icon": "Cpu",
       "lessons": [
         {
-          "id": "l-cache", "type": "concept", "title": "Caching and TTL", "est": 6, "conceptIds": ["c-cache"],
+          "id": "l-cache",
+          "type": "concept",
+          "title": "Caching and TTL",
+          "est": 6,
+          "conceptIds": [
+            "c-cache"
+          ],
           "summary": "Looking up every name every time would be slow. DNS remembers answers for a while.",
           "sections": {
             "what": "Resolvers cache answers for a period called the TTL (time to live).",
@@ -108,8 +369,43 @@
             "ifChanged": "A very long TTL makes changes take longer to appear; a very short TTL increases lookups."
           },
           "warning": "When you change where a domain points, users may keep hitting the old value until the TTL expires.",
-          "checks": ["chk-cache"],
-          "teachBack": "Explain the tradeoff a short TTL versus a long TTL in your own words."
+          "checks": [
+            "chk-cache"
+          ],
+          "teachBack": "Explain the tradeoff a short TTL versus a long TTL in your own words.",
+          "scenario": {
+            "title": "Play the resolver",
+            "prompt": "Same browser, three situations. Pick one and watch what actually happens.",
+            "choices": [
+              {
+                "label": "You revisit a site from a minute ago",
+                "steps": [
+                  "The name is still in the cache and the TTL has not expired",
+                  "No DNS server is contacted at all"
+                ],
+                "outcome": "Instant answer from cache. This is why the second visit always feels faster."
+              },
+              {
+                "label": "You typo a domain that does not exist",
+                "steps": [
+                  "The resolver walks root and TLD as usual",
+                  "The authoritative side replies NXDOMAIN (no such name)",
+                  "The resolver caches this negative answer too"
+                ],
+                "outcome": "You get a lookup error, and repeat attempts fail instantly because even 'no' is cached for a while."
+              },
+              {
+                "label": "The site moved servers an hour ago",
+                "steps": [
+                  "Your resolver still holds the old IP because its TTL has not expired",
+                  "Traffic keeps going to the old address",
+                  "When the TTL runs out, the next lookup fetches the new IP"
+                ],
+                "outcome": "You may reach the old server until the TTL expires. This is why admins lower the TTL before a migration."
+              }
+            ]
+          },
+          "activity": "Run `dig` on any site twice, a few seconds apart, and watch the TTL number count down between runs."
         }
       ]
     }

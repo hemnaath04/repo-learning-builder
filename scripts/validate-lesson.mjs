@@ -21,6 +21,29 @@ export function validateLesson(l, ctx = {}) {
   const hasBody = (l.sections && Object.keys(l.sections).length) || l.summary || l.walkthrough || l.flow || l.compare;
   if (!hasBody) add('sections', 'lesson has no sections, summary, walkthrough, flow, or comparison');
   if (l.sections) for (const k of Object.keys(l.sections)) if (!SECTIONS.includes(k)) add(`sections.${k}`, `unknown section key (allowed: ${SECTIONS.join(', ')})`);
+  // Pedagogy blocks (optional, but must be well-formed when present).
+  if (l.predict) {
+    if (!l.predict.question || !l.predict.reveal) add('predict', 'needs question and reveal');
+    if (l.predict.options && (!Array.isArray(l.predict.options) || l.predict.options.length < 2)) add('predict.options', 'need >= 2 options');
+  }
+  if (l.worked) {
+    if (!l.worked.intro) add('worked.intro', 'missing intro');
+    if (!Array.isArray(l.worked.steps) || l.worked.steps.length === 0) add('worked.steps', 'must be a non-empty array');
+    else l.worked.steps.forEach((st, i) => {
+      if (!st?.label) add(`worked.steps[${i}].label`, 'missing label');
+      if (st?.state && (!Array.isArray(st.state) || st.state.some((p) => !p?.k || typeof p.v !== 'string'))) add(`worked.steps[${i}].state`, 'must be [{k,v}] string pairs');
+    });
+  }
+  if (l.scenario) {
+    if (!l.scenario.prompt) add('scenario.prompt', 'missing prompt');
+    if (!Array.isArray(l.scenario.choices) || l.scenario.choices.length === 0) add('scenario.choices', 'must be a non-empty array');
+    else l.scenario.choices.forEach((ch, i) => {
+      if (!ch?.label || !ch?.outcome) add(`scenario.choices[${i}]`, 'needs label and outcome');
+      if (ch?.steps && !Array.isArray(ch.steps)) add(`scenario.choices[${i}].steps`, 'must be an array of strings');
+    });
+  }
+  if (l.figure && (!l.figure.src || !l.figure.alt)) add('figure', 'needs src and alt');
+  if (l.analogyPairs && (!Array.isArray(l.analogyPairs) || l.analogyPairs.some((p) => !p?.from || !p?.to))) add('analogyPairs', 'must be [{from,to}]');
   // Referential checks only when registry context is supplied (whole-course pass).
   if (ctx.conceptIds) for (const id of l.conceptIds ?? []) if (!ctx.conceptIds.has(id)) add('conceptIds', `concept "${id}" not in registry`);
   if (ctx.sourceIds) for (const id of l.sourceIds ?? []) if (!ctx.sourceIds.has(id)) add('sourceIds', `source "${id}" not in registry`);

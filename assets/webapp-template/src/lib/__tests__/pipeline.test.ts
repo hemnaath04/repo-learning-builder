@@ -70,9 +70,11 @@ describe('deterministic pipeline scripts', () => {
   });
 
   it('keeps prompts small enough for Haiku-class context', () => {
+    // ~900 tokens max per prompt. Raised from 2600 when the pedagogy blocks
+    // (predict/worked/scenario/analogyPairs) joined the lesson contract.
     for (const p of ['plan-course.md', 'generate-lesson.md', 'generate-quiz.md', 'generate-glossary.md', 'repair-json.md']) {
       const bytes = readFileSync(join(promptsDir, p), 'utf8').length;
-      expect(bytes).toBeLessThan(2600);
+      expect(bytes).toBeLessThan(3600);
     }
   });
 });

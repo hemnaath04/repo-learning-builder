@@ -43,6 +43,7 @@ export const SECTION_ORDER = ['what', 'why', 'how', 'connects', 'ifChanged'] as 
 export const CALLOUT_LABELS: Record<string, { label: string; icon: string }> = {
   example: { label: 'Example', icon: 'Sparkles' },
   analogy: { label: 'Analogy', icon: 'Quote' },
+  misconception: { label: 'Common misconception', icon: 'ShieldAlert' },
   insight: { label: 'Insight', icon: 'Lightbulb' },
   warning: { label: 'Watch out', icon: 'TriangleAlert' },
 };

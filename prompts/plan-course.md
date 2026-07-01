@@ -10,6 +10,10 @@ RULES
 - Write concept, technology, source, and glossary registry entries the lessons will reference.
 - Keep lesson count within the depth budget already in the scaffold. No filler.
 - Titles <= 6 words. Summaries <= 20 words. Registry summaries <= 16 words.
+- Mark per lesson which pedagogy blocks the lesson generator should produce
+  ("features"): aim for one "worked" and one "predict" per module, 1-3
+  "scenario" per course on lessons with real branching, "analogyPairs" on the
+  most conceptual lesson of each module.
 
 OUTPUT SHAPE (JSON)
 {
@@ -20,7 +24,7 @@ OUTPUT SHAPE (JSON)
     "sources": { "s-x": { "path": "real/path.ts", "lines": "1-40", "note": "..." } },
     "glossary": { "g-x": { "term": "...", "definition": "one plain sentence" } }
   },
-  "modules": [ { "id": "m-story", "title": "...", "summary": "...", "lessons": [ { "id": "l-story", "title": "...", "summary": "..." } ] } ]
+  "modules": [ { "id": "m-story", "title": "...", "summary": "...", "lessons": [ { "id": "l-story", "title": "...", "summary": "...", "features": ["worked","predict"] } ] } ]
 }
 
 Every source path must exist in the manifest. Return only the JSON object.

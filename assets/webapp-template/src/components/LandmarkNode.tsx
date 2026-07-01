@@ -14,7 +14,7 @@ export function LandmarkNode({ landmark, selected, onSelect }: { landmark: Landm
       aria-current={selected ? 'true' : undefined}
       aria-label={`Landmark ${order}: ${title}, ${estimatedMinutes} minutes, ${status}`}
       onClick={onSelect}
-      style={{ left: slot.left, top: slot.top, width: slot.width, height: slot.height }}
+      style={{ left: slot.left, top: slot.top, width: slot.width, height: slot.height, animationDelay: `${order * 70}ms` }}
     >
       <span className="lm-top">
         <span className="lm-eyebrow">{eyebrow}</span>
