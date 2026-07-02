@@ -93,6 +93,8 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .tb-progress:hover { color: var(--text); }
 .tb-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); display: grid; place-items: center; color: var(--text-muted); }
 .tb-avatar:hover { color: var(--text); }
+.tb-theme { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); display: grid; place-items: center; color: var(--text-muted); transition: color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease); }
+.tb-theme:hover { color: var(--text); transform: rotate(14deg); }
 
 /* ============================================================================ 2. Atlas page */
 .atlas-page { max-width: 1440px; margin: 0 auto; padding: 26px 28px 28px; display: grid; gap: 20px; width: 100%; }
@@ -141,7 +143,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .landmark.v-story { background: var(--atlas-blue); color: #fff; border-radius: 18px; padding: 18px; }
 .landmark.v-story .lm-sub { color: var(--atlas-on-blue); opacity: 1; }
 .landmark.v-story .lm-title { font-size: 22px; line-height: 25px; }
-.landmark.v-problem { background: var(--surface); color: var(--atlas-ink); border: 2px solid var(--atlas-ink); }
+.landmark.v-problem { background: var(--surface); color: var(--text); border: 2px solid var(--border); }
 .landmark.v-problem .lm-sub { color: var(--text-muted); }
 .landmark.v-problem .lm-title { font-size: 19px; line-height: 23px; }
 .landmark.v-journey { background: var(--atlas-coral); color: #fff; border-radius: 18px; padding: 17px; }
@@ -149,7 +151,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .landmark.v-journey .lm-title { font-size: 21px; line-height: 24px; }
 .landmark.v-toolbox { background: var(--atlas-mint); color: #12352a; }
 .landmark.v-toolbox .lm-sub { color: var(--atlas-on-mint); opacity: 1; }
-.landmark.v-architecture { background: var(--surface); color: var(--atlas-ink); border: 2px solid var(--atlas-blue); }
+.landmark.v-architecture { background: var(--surface); color: var(--text); border: 2px solid var(--atlas-blue); }
 .landmark.v-architecture .lm-sub { color: var(--text-muted); }
 .landmark.v-build { background: var(--atlas-ink); color: #fff; border-radius: 18px; padding: 17px; }
 .landmark.v-build .lm-sub { color: var(--atlas-on-ink); opacity: 1; }
@@ -484,6 +486,7 @@ kbd { font-family: var(--font-mono); background: var(--surface-2); border: 1px s
   .brand-name { display: none; }
   .tb-course { flex: 1; min-width: 0; max-width: 52vw; }
   .tb-avatar { width: 44px; height: 44px; }
+  .tb-theme { width: 44px; height: 44px; }
   /* Bottom navigation. */
   .bottomnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--hairline); padding-bottom: env(safe-area-inset-bottom); }
   .bn-item { flex: 1; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: none; background: none; color: var(--text-muted); font-size: 0.62rem; font-family: var(--font-body); }

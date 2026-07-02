@@ -11,12 +11,13 @@ const NAV: Array<{ view: View; label: string; icon: string; match: View[] }> = [
 ];
 
 export function AtlasTopBar() {
-  const { course, progress, route, navigate, registry, courseId, selectCourse } = useApp();
+  const { course, progress, route, navigate, registry, courseId, selectCourse, effectiveTheme, setTheme } = useApp();
   const pct = course && progress ? completionPercent(course, progress) : 0;
   const isRepo = course?.meta.sourceType === 'repository' || course?.meta.sourceType === 'github-url';
   const manyCourses = (registry?.courses.length ?? 0) > 1;
   const items = NAV.filter((n) => n.view !== 'explorer' || isRepo);
   const isActive = (m: View[]) => m.includes(route.view);
+  const toggleTheme = () => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
 
   return (
     <>
@@ -44,6 +45,9 @@ export function AtlasTopBar() {
 
         <div className="tb-right">
           <button className="tb-progress" onClick={() => navigate({ view: 'dashboard' })}>{pct}% complete</button>
+          <button className="tb-theme" onClick={toggleTheme} aria-label={effectiveTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <Icon name={effectiveTheme === 'dark' ? 'Sun' : 'Moon'} size={16} />
+          </button>
           <button className="tb-avatar" onClick={() => navigate({ view: 'settings' })} aria-label="Settings">
             <Icon name="Settings" size={17} />
           </button>
@@ -59,6 +63,9 @@ export function AtlasTopBar() {
         ))}
         <button className={`bn-item${route.view === 'dashboard' ? ' active' : ''}`} onClick={() => navigate({ view: 'dashboard' })}>
           <Icon name="BarChart3" size={20} /> <span>Progress</span>
+        </button>
+        <button className="bn-item" onClick={toggleTheme} aria-label={effectiveTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <Icon name={effectiveTheme === 'dark' ? 'Sun' : 'Moon'} size={20} /> <span>Theme</span>
         </button>
         <button className={`bn-item${route.view === 'settings' ? ' active' : ''}`} onClick={() => navigate({ view: 'settings' })}>
           <Icon name="Settings" size={20} /> <span>Settings</span>
